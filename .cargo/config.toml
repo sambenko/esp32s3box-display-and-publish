@@ -1,13 +1,18 @@
 [target.xtensa-esp32s3-none-elf]
-runner = "espflash flash --monitor"
+runner = "espflash --monitor"
 
 [build]
 rustflags = [
-  "-C", "link-arg=-Tlinkall.x",
-  "-C", "link-arg=-nostartfiles",
-]
+    #"-C", "linker=rust-lld",    
 
+    "-C", "link-arg=-Tlinkall.x",
+    "-C", "link-arg=-Trom_functions.x",
+
+    # for now disable loop optimization
+    "-C", "target-feature=-loop",
+]
 target = "xtensa-esp32s3-none-elf"
+
 
 [unstable]
 build-std = ["core"]
