@@ -21,9 +21,4 @@ embedded-graphics = "0.7"
 profont = "0.6.1"
 
 [features]
-default = [ "rt", "eh1" ]
-rt = [ ]
-eh1 = ["esp32s3-hal/eh1", "esp32s3"]
-
-esp32s3 = []
-esp32c3 = []
+default = [ "esp32s3-hal/eh1" ]
