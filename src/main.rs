@@ -4,7 +4,10 @@
 use core::fmt::Write as FmtWrite;
 use embedded_graphics::{
     mono_font::MonoTextStyle, pixelcolor::Rgb565, prelude::*, text::Text, Drawable,
+    primitives::RoundedRectangle,
 };
+
+use embedded_graphics_framebuf::FrameBuf;
 
 use esp32s3_hal::{
     clock::{ClockControl, CpuClock}, 
@@ -32,7 +35,6 @@ fn make_bits(bytes :&[u8]) -> u32 {
 
 #[entry]
 fn main() -> ! {
-    esp_wifi::init_heap();
 
     let peripherals = Peripherals::take();
     let mut system = peripherals.SYSTEM.split();
@@ -77,8 +79,9 @@ fn main() -> ! {
         .init(&mut delay, Some(reset))
         .unwrap();
 
+    let mut data = [Rgb565::WHITE; 320 * 240];
+    let mut fbuf = FrameBuf::new(&mut data, 320, 240);
     display.clear(Rgb565::WHITE).unwrap();
-
     let text_style = MonoTextStyle::new(&PROFONT_24_POINT, RgbColor::BLACK);
 
     Text::new("Temperature: ", Point::new(10, 25), text_style)
@@ -89,20 +92,25 @@ fn main() -> ! {
     let mut esp_now = esp_wifi::esp_now::EspNow::new(wifi).unwrap();
     println!("esp-now version {}", esp_now.get_version().unwrap());
 
-    let mut temperature: heapless::String<256> = heapless::String::new();
+    let mut temperature: heapless::String<16> = heapless::String::new();
 
     let mut next_send_time = current_millis() + 5 * 1000;
     
     loop {
         let r = esp_now.receive();
         if let Some(r) = r {
+            fbuf.clear(Rgb565::WHITE).unwrap();
             let bits: u32 = make_bits(r.get_data());
-            println!("Recieved {:x?}°C ", f32::from_bits(bits));
-            write!(temperature,"{}°C", f32::from_bits(bits)).unwrap();
-            Text::new(&temperature, Point::new(100, 120), text_style)
-                .draw(&mut display)
+            println!("Received {:.1}°C ", f32::from_bits(bits));
+            write!(temperature,"{:.1}°C", f32::from_bits(bits)).unwrap();
+            Text::new("Temperature: ", Point::new(10, 25), text_style)
+                .draw(&mut fbuf)
+                .unwrap();
+            Text::new(&temperature, Point::new(210, 28), text_style)
+                .draw(&mut fbuf)
                 .unwrap();
             temperature.clear();
+            display.draw_iter(fbuf.into_iter()).unwrap();
 
             if r.info.dst_address == BROADCAST_ADDRESS {
                 if !esp_now.peer_exists(&r.info.src_address).unwrap() {
