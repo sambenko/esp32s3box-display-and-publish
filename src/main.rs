@@ -3,8 +3,7 @@
 
 use core::fmt::Write as FmtWrite;
 use embedded_graphics::{
-    mono_font::MonoTextStyle, pixelcolor::Rgb565, prelude::*, text::Text, Drawable,
-    primitives::RoundedRectangle,
+    pixelcolor::Rgb565, prelude::*, text::Text, Drawable,
 };
 
 use embedded_graphics_framebuf::FrameBuf;
@@ -22,7 +21,8 @@ use esp_println::println;
 
 use display_interface_spi::SPIInterfaceNoCS;
 use mipidsi::{ColorOrder, Orientation};
-use profont::PROFONT_24_POINT;
+
+use ui::build_ui;
 
 
 fn make_bits(bytes :&[u8]) -> u32 {
@@ -31,7 +31,6 @@ fn make_bits(bytes :&[u8]) -> u32 {
         | ((bytes[2] as u32) << 8)
         | 0
 }
-
 
 #[entry]
 fn main() -> ! {
@@ -79,20 +78,21 @@ fn main() -> ! {
         .init(&mut delay, Some(reset))
         .unwrap();
 
-    let mut data = [Rgb565::WHITE; 320 * 240];
-    let mut fbuf = FrameBuf::new(&mut data, 320, 240);
     display.clear(Rgb565::WHITE).unwrap();
-    let text_style = MonoTextStyle::new(&PROFONT_24_POINT, RgbColor::BLACK);
 
-    Text::new("Temperature: ", Point::new(10, 25), text_style)
-        .draw(&mut display)
-        .unwrap();
+    ui::build_ui(&mut display);
 
     let (wifi, _) = peripherals.RADIO.split();
     let mut esp_now = esp_wifi::esp_now::EspNow::new(wifi).unwrap();
     println!("esp-now version {}", esp_now.get_version().unwrap());
 
     let mut temperature: heapless::String<16> = heapless::String::new();
+    let mut gas: heapless::String<16> = heapless::String::new();
+    let mut pressure: heapless::String<16> = heapless::String::new();
+    let mut humidity: heapless::String<16> = heapless::String::new();
+
+    let mut data = [Rgb565::CSS_LIGHT_GRAY; 59 * 34];
+    let mut fbuf = FrameBuf::new(&mut data, 59, 34);
 
     let mut next_send_time = current_millis() + 5 * 1000;
     
@@ -103,12 +103,9 @@ fn main() -> ! {
             let bits: u32 = make_bits(r.get_data());
             println!("Received {:.1}°C ", f32::from_bits(bits));
             write!(temperature,"{:.1}°C", f32::from_bits(bits)).unwrap();
-            Text::new("Temperature: ", Point::new(10, 25), text_style)
-                .draw(&mut fbuf)
-                .unwrap();
-            Text::new(&temperature, Point::new(210, 28), text_style)
-                .draw(&mut fbuf)
-                .unwrap();
+            // Text::new(&temperature, Point::new(210, 28), text_style)
+            //     .draw(&mut fbuf)
+            //     .unwrap();
             temperature.clear();
             display.draw_iter(fbuf.into_iter()).unwrap();
 
