@@ -20,6 +20,7 @@ mipidsi = "0.6.0"
 embedded-graphics = "0.7"
 profont = "0.6.1"
 embedded-graphics-framebuf = "0.2.0"
+ui = { path = "./ui"}
 
 [features]
 default = [ "esp32s3-hal/eh1" ]
