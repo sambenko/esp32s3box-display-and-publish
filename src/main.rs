@@ -1,12 +1,9 @@
 #![no_std]
 #![no_main]
 
-use core::fmt::Write as FmtWrite;
 use embedded_graphics::{
-    pixelcolor::Rgb565, prelude::*, text::Text, Drawable,
+    pixelcolor::Rgb565, prelude::*,
 };
-
-use embedded_graphics_framebuf::FrameBuf;
 
 use esp32s3_hal::{
     clock::{ClockControl, CpuClock}, 
@@ -22,7 +19,7 @@ use esp_println::println;
 use display_interface_spi::SPIInterfaceNoCS;
 use mipidsi::{ColorOrder, Orientation};
 
-use ui::build_ui;
+use ui::{ build_ui, update_temperature };
 
 
 fn make_bits(bytes :&[u8]) -> u32 {
@@ -80,34 +77,20 @@ fn main() -> ! {
 
     display.clear(Rgb565::WHITE).unwrap();
 
-    ui::build_ui(&mut display);
+    build_ui(&mut display);
 
     let (wifi, _) = peripherals.RADIO.split();
     let mut esp_now = esp_wifi::esp_now::EspNow::new(wifi).unwrap();
     println!("esp-now version {}", esp_now.get_version().unwrap());
-
-    let mut temperature: heapless::String<16> = heapless::String::new();
-    let mut gas: heapless::String<16> = heapless::String::new();
-    let mut pressure: heapless::String<16> = heapless::String::new();
-    let mut humidity: heapless::String<16> = heapless::String::new();
-
-    let mut data = [Rgb565::CSS_LIGHT_GRAY; 59 * 34];
-    let mut fbuf = FrameBuf::new(&mut data, 59, 34);
 
     let mut next_send_time = current_millis() + 5 * 1000;
     
     loop {
         let r = esp_now.receive();
         if let Some(r) = r {
-            fbuf.clear(Rgb565::WHITE).unwrap();
             let bits: u32 = make_bits(r.get_data());
             println!("Received {:.1}°C ", f32::from_bits(bits));
-            write!(temperature,"{:.1}°C", f32::from_bits(bits)).unwrap();
-            // Text::new(&temperature, Point::new(210, 28), text_style)
-            //     .draw(&mut fbuf)
-            //     .unwrap();
-            temperature.clear();
-            display.draw_iter(fbuf.into_iter()).unwrap();
+            update_temperature(&mut display, f32::from_bits(bits));
 
             if r.info.dst_address == BROADCAST_ADDRESS {
                 if !esp_now.peer_exists(&r.info.src_address).unwrap() {
