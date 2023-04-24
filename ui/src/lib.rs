@@ -8,7 +8,9 @@ use embedded_graphics::{
 };
 use profont::PROFONT_18_POINT;
 
-pub fn overlay<D>(display: &mut D)
+use core::fmt::Write as FmtWrite;
+
+fn overlay<D>(display: &mut D)
 where 
     D:DrawTarget<Color = Rgb565>+Dimensions {
 
@@ -26,7 +28,7 @@ where
         .draw(display);
 }
 
-pub fn field<D>(display: &mut D, pos: i32)
+fn field<D>(display: &mut D, pos: i32)
 where 
     D:DrawTarget<Color = Rgb565>+Dimensions {
 
@@ -38,14 +40,14 @@ where
 
 
         RoundedRectangle::with_equal_corners(
-            Rectangle::new(Point::new(200, pos), Size::new(60, 35)),
+            Rectangle::new(Point::new(200, pos), Size::new(65, 35)),
             Size::new(10, 10),
         )
         .into_styled(style)
         .draw(display);
 }
 
-pub fn draw_label<D>(display: &mut D, label: &str, pos_y: i32)
+fn draw_label<D>(display: &mut D, label: &str, pos_y: i32)
 where 
     D:DrawTarget<Color = Rgb565>+Dimensions {
 
@@ -77,4 +79,33 @@ where
         }
 }
 
+pub fn update_temperature<D>(display: &mut D, temperature: f32)
+where 
+    D:DrawTarget<Color = Rgb565>+Dimensions {
 
+        let temperature_position = Point::new(209, 54);
+
+        let text_style = MonoTextStyle::new(&PROFONT_18_POINT, RgbColor::WHITE);
+
+        let mut temperature_data: heapless::String<16> = heapless::String::new();
+
+        write!(temperature_data,"{:.1}", temperature).unwrap();
+
+        let mut clear_string = heapless::String::<16>::new();
+        for _ in 0..temperature_data.len() {
+            clear_string.push(' ').unwrap_or_default();
+        }
+
+        // By redrawing the field, we clear the temperature data
+        field(display, 30);
+
+        // Draw the new temperature data
+        Text::new(
+            &temperature_data, 
+            temperature_position, 
+            text_style
+        )
+        .draw(display);
+
+        
+}
