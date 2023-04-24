@@ -6,5 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+heapless = { version = "0.7.14", default-features = false }
 embedded-graphics = "0.7"
 profont = "0.6.1"
