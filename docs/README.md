@@ -6,7 +6,7 @@
     <img src="images/sensor_display.jpg" alt="Sensor data displayed" width="300" height="300">
   </a>
 
-<h3 align="center">Display sensor data</h3>
+<h3 align="center">Display sensor data <b>WIP</b></h3>
 
   <p align="center">
     This project focuses on displaying data (only temperature for now) captured by the sensor.
