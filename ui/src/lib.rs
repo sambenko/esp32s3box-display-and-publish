@@ -28,32 +28,42 @@ where
         .draw(display);
 }
 
-fn field<D>(display: &mut D, pos: i32)
+fn field<D>(display: &mut D, pos: i32, iaq: i32)
 where 
     D:DrawTarget<Color = Rgb565>+Dimensions {
+
+        let color;
+
+        if iaq < 0 {
+            color = Rgb565::CSS_ALICE_BLUE; 
+        } else {
+            color = Rgb565::CSS_LAWN_GREEN;
+        }
 
         let style = PrimitiveStyleBuilder::new()
             .stroke_width(5)
             .stroke_color(Rgb565::BLACK)
-            .fill_color(Rgb565::CSS_LIGHT_GRAY)
+            .fill_color(color)
             .build();
 
-
         RoundedRectangle::with_equal_corners(
-            Rectangle::new(Point::new(200, pos), Size::new(65, 35)),
+            Rectangle::new(Point::new(220, pos), Size::new(65, 35)),
             Size::new(10, 10),
         )
         .into_styled(style)
         .draw(display);
+
+
+        
 }
 
 fn draw_label<D>(display: &mut D, label: &str, pos_y: i32)
 where 
     D:DrawTarget<Color = Rgb565>+Dimensions {
 
-        let text_style = MonoTextStyle::new(&PROFONT_18_POINT, RgbColor::BLACK);
+        let style = MonoTextStyle::new(&PROFONT_18_POINT, RgbColor::BLACK);
 
-        Text::new(label, Point::new(35, pos_y), text_style)
+        Text::new(label, Point::new(35, pos_y), style)
             .draw(display);
 }
 
@@ -63,11 +73,13 @@ where
 
         overlay(display);
 
-        for pos in (30..190).step_by(47) {
-            field(display, pos);
+        for pos in (30..125).step_by(47) {
+            field(display, pos, -1);
         }
 
-        let labels = ["Temperature: ", "Humidity: ", "Pressure: ", "Gas: "];
+        field(display, 171, 10);
+
+        let labels = ["Temperature(°C)", "Humidity(%)", "Pressure(Pa)", "Air quality"];
 
         let mut l = 0;
         let mut pos_y = 52;
@@ -75,7 +87,7 @@ where
             draw_label(display, labels[l], pos_y);
 
             l += 1;
-            pos_y += 50;
+            pos_y += 48;
         }
 }
 
@@ -83,9 +95,9 @@ pub fn update_temperature<D>(display: &mut D, temperature: f32)
 where 
     D:DrawTarget<Color = Rgb565>+Dimensions {
 
-        let temperature_position = Point::new(209, 54);
+        let temperature_position = Point::new(229, 54);
 
-        let text_style = MonoTextStyle::new(&PROFONT_18_POINT, RgbColor::WHITE);
+        let text_style = MonoTextStyle::new(&PROFONT_18_POINT, RgbColor::BLACK);
 
         let mut temperature_data: heapless::String<16> = heapless::String::new();
 
@@ -97,7 +109,7 @@ where
         }
 
         // By redrawing the field, we clear the temperature data
-        field(display, 30);
+        field(display, 30, -1);
 
         // Draw the new temperature data
         Text::new(
