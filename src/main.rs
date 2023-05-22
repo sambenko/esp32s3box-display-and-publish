@@ -6,8 +6,15 @@ use embedded_graphics::{
 };
 
 use esp32s3_hal::{
-    clock::{ClockControl, CpuClock}, 
-    peripherals::Peripherals, prelude::*, timer::TimerGroup, spi, Rtc, Rng, IO, Delay,
+    clock::{ClockControl, CpuClock},
+    gpio::IO,
+    peripherals::Peripherals,
+    prelude::*,
+    timer::TimerGroup,
+    Rtc,
+    Rng,
+    Delay,
+    spi
 };
 
 use esp_wifi::esp_now::{PeerInfo, BROADCAST_ADDRESS};
@@ -21,7 +28,6 @@ use mipidsi::{ColorOrder, Orientation};
 
 use ui::{ build_ui, update_temperature };
 
-
 fn make_bits(bytes :&[u8]) -> u32 {
     ((bytes[0] as u32) << 24)
         | ((bytes[1] as u32) << 16)
@@ -34,17 +40,25 @@ fn main() -> ! {
 
     let peripherals = Peripherals::take();
     let mut system = peripherals.SYSTEM.split();
-
     let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock240MHz).freeze();
 
-    // Disable the RTC and TIMG watchdog timers
+    let timer_group0 = TimerGroup::new(peripherals.TIMG1, &clocks,  &mut system.peripheral_clock_control);
+    let timer = timer_group0.timer0;
+
+    initialize(
+        timer,
+        Rng::new(peripherals.RNG),
+        system.radio_clock_control,
+        &clocks,
+    )
+    .unwrap();
+
+    let mut wdt = timer_group0.wdt;
     let mut rtc = Rtc::new(peripherals.RTC_CNTL);
 
-    rtc.swd.disable();
+    // Disable the RTC and TIMG watchdog timers
+    wdt.disable();
     rtc.rwdt.disable();
-
-    let timg1 = TimerGroup::new(peripherals.TIMG1, &clocks);
-    initialize(timg1.timer0, Rng::new(peripherals.RNG), system.radio_clock_control, &clocks).unwrap();
     
     let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
 
@@ -53,6 +67,8 @@ fn main() -> ! {
     let mut backlight = io.pins.gpio45.into_push_pull_output();
 
     backlight.set_high().unwrap();
+
+    
 
     let spi = spi::Spi::new_no_cs_no_miso(
         peripherals.SPI2,
@@ -63,7 +79,7 @@ fn main() -> ! {
         &mut system.peripheral_clock_control,
         &clocks,
     );
-
+    
     let di = SPIInterfaceNoCS::new(spi, io.pins.gpio4.into_push_pull_output());
     let reset = io.pins.gpio48.into_push_pull_output();
     let mut delay = Delay::new(&clocks);
@@ -89,8 +105,9 @@ fn main() -> ! {
         let r = esp_now.receive();
         if let Some(r) = r {
             let bits: u32 = make_bits(r.get_data());
-            println!("Received {:.1}°C ", f32::from_bits(bits));
-            update_temperature(&mut display, f32::from_bits(bits));
+            let temperature = f32::from_bits(bits);
+            println!("Received {:.1}°C ", temperature);
+            update_temperature(&mut display, temperature);
 
             if r.info.dst_address == BROADCAST_ADDRESS {
                 if !esp_now.peer_exists(&r.info.src_address).unwrap() {
