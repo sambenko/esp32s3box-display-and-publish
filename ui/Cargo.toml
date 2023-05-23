@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 heapless = { version = "0.7.14", default-features = false }
 embedded-graphics = "0.8.0"
-profont = { version = "0.6.1", git = "https://github.com/sambenko/profont.git" }
+profont = { version = "0.6.1", git = "https://github.com/sambenko/profont.git", branch = "embedded-graphics-0.8.0-fixes"}
