@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+use core::time::Duration;
+
 use embedded_graphics::{
     pixelcolor::Rgb565, prelude::*,
 };
@@ -8,6 +10,7 @@ use embedded_graphics::{
 use esp32s3_hal::{
     clock::{ClockControl, CpuClock},
     gpio::IO,
+    i2c::I2C,
     peripherals::Peripherals,
     prelude::*,
     timer::TimerGroup,
@@ -16,8 +19,6 @@ use esp32s3_hal::{
     Delay,
     spi
 };
-
-use esp_wifi::esp_now::{PeerInfo, BROADCAST_ADDRESS};
 use esp_wifi::{current_millis, initialize};
 
 use esp_backtrace as _;
@@ -26,14 +27,9 @@ use esp_println::println;
 use display_interface_spi::SPIInterfaceNoCS;
 use mipidsi::{ColorOrder, Orientation};
 
-use ui::{ build_ui, update_temperature };
+use ui::{ build_ui, update_data};
 
-fn make_bits(bytes :&[u8]) -> u32 {
-    ((bytes[0] as u32) << 24)
-        | ((bytes[1] as u32) << 16)
-        | ((bytes[2] as u32) << 8)
-        | 0
-}
+use bme680::*;
 
 #[entry]
 fn main() -> ! {
@@ -68,8 +64,6 @@ fn main() -> ! {
 
     backlight.set_high().unwrap();
 
-    
-
     let spi = spi::Spi::new_no_cs_no_miso(
         peripherals.SPI2,
         sclk,
@@ -95,38 +89,53 @@ fn main() -> ! {
 
     build_ui(&mut display);
 
-    let (wifi, _) = peripherals.RADIO.split();
-    let mut esp_now = esp_wifi::esp_now::EspNow::new(wifi).unwrap();
-    println!("esp-now version {}", esp_now.get_version().unwrap());
+    // Create a new peripheral object with the described wiring
+    // and standard I2C clock speed
+    let i2c = I2C::new(
+        peripherals.I2C0,
+        io.pins.gpio41,
+        io.pins.gpio40,
+        100u32.kHz(),
+        &mut system.peripheral_clock_control,
+        &clocks,
+    );
 
-    let mut next_send_time = current_millis() + 5 * 1000;
-    
+    let mut bme = Bme680::init(i2c, &mut delay, I2CAddress::Primary).expect("Failed to initialize Bme680");
+    let settings = SettingsBuilder::new()
+        .with_humidity_oversampling(OversamplingSetting::OS2x)
+        .with_pressure_oversampling(OversamplingSetting::OS4x)
+        .with_temperature_oversampling(OversamplingSetting::OS8x)
+        .with_temperature_filter(IIRFilterSize::Size3)
+        .with_gas_measurement(Duration::from_millis(1500), 320, 25)
+        .with_run_gas(true)
+        .build();
+    bme.set_sensor_settings(&mut delay, settings).expect("Failed to set the settings");
+
     loop {
-        let r = esp_now.receive();
-        if let Some(r) = r {
-            let bits: u32 = make_bits(r.get_data());
-            let temperature = f32::from_bits(bits);
-            println!("Received {:.1}°C ", temperature);
-            update_temperature(&mut display, temperature);
+        bme.set_sensor_mode(&mut delay, PowerMode::ForcedMode).expect("Failed to set sensor mode");
 
-            if r.info.dst_address == BROADCAST_ADDRESS {
-                if !esp_now.peer_exists(&r.info.src_address).unwrap() {
-                    esp_now
-                        .add_peer(PeerInfo {
-                            peer_address: r.info.src_address,
-                            lmk: None,
-                            channel: None,
-                            encrypt: false,
-                        })
-                        .unwrap();
-                }
-                esp_now.send(&r.info.src_address, b"Received, Thanks!").unwrap();
-            }
-        }
-        if current_millis() >= next_send_time {
-            next_send_time = current_millis() + 5 * 5000;
-            println!("Send");
-            esp_now.send(&BROADCAST_ADDRESS, b"0123456789").unwrap();
-        }
+        let profile_duration = bme.get_profile_dur(&settings.0).expect("Failed to get profile duration");
+        let duration_ms = profile_duration.as_millis() as u32;
+        delay.delay_ms(duration_ms);
+
+        let (data, _state) = bme.get_sensor_data(&mut delay).expect("Failed to get sensor data");
+
+        let temp = data.temperature_celsius();
+        let hum = data.humidity_percent();
+        let pres = data.pressure_hpa();
+        let gas = data.gas_resistance_ohm();
+
+        println!("|========================|");
+        println!("| Temperature {:.2}°C    |", temp);
+        println!("| Humidity {:.2}%        |", hum);
+        println!("| Pressure {:.2}hPa     |", pres);
+        println!("| Gas Resistance {:.2}Ω |", gas);
+        println!("|========================|");
+
+        update_data(&mut display, temp, 54, 24);
+        update_data(&mut display, hum, 99, 22);
+        update_data(&mut display, pres, 148, 23);
+
+        delay.delay_ms(10000u32);
     }
 }
