@@ -19,7 +19,18 @@ use esp32s3_hal::{
     Delay,
     spi
 };
-use esp_wifi::{current_millis, initialize};
+
+use embedded_svc::{
+    ipv4::Interface,
+    wifi::{ClientConfiguration, Configuration, Wifi},
+};
+
+use esp_wifi::{
+    current_millis,
+    initialize,
+    wifi::{utils::create_network_interface, WifiMode},
+    wifi_interface::WifiStack,
+};
 
 use esp_backtrace as _;
 use esp_println::println;
@@ -29,7 +40,20 @@ use mipidsi::{ColorOrder, Orientation};
 
 use ui::{ build_ui, update_data};
 
+use smoltcp::{
+    iface::SocketStorage, 
+    wire::{ IpAddress, Ipv4Address }
+};
+use esp_mbedtls::{ Mode, TlsVersion };
+use esp_mbedtls::{ Certificates, Session };
+
 use bme680::*;
+
+const SSID: &str = env!("SSID");
+const PASSWORD: &str = env!("PASSWORD");
+const CERT: &'static str = concat!(include_str!("../certs/AmazonRootCA1.pem"), "\0");
+const CLIENT_CERT: &'static str = concat!(include_str!("../certs/device-certificate.pem.crt"), "\0");
+const PRIVATE_KEY: &'static str = concat!(include_str!("../certs/private.pem.key"), "\0");
 
 #[entry]
 fn main() -> ! {
@@ -38,18 +62,14 @@ fn main() -> ! {
     let mut system = peripherals.SYSTEM.split();
     let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock240MHz).freeze();
 
-    let timer_group0 = TimerGroup::new(peripherals.TIMG1, &clocks,  &mut system.peripheral_clock_control);
-    let timer = timer_group0.timer0;
-
-    initialize(
-        timer,
-        Rng::new(peripherals.RNG),
-        system.radio_clock_control,
+    let timer_group = TimerGroup::new(
+        peripherals.TIMG1,
         &clocks,
-    )
-    .unwrap();
+        &mut system.peripheral_clock_control,
+    );
+    let timer = timer_group.timer0;
 
-    let mut wdt = timer_group0.wdt;
+    let mut wdt = timer_group.wdt;
     let mut rtc = Rtc::new(peripherals.RTC_CNTL);
 
     // Disable the RTC and TIMG watchdog timers
@@ -88,6 +108,94 @@ fn main() -> ! {
     display.clear(Rgb565::WHITE).unwrap();
 
     build_ui(&mut display);
+
+    let (wifi, _) = peripherals.RADIO.split();
+    let mut socket_set_entries: [SocketStorage; 3] = Default::default();
+    let (iface, device, mut controller, sockets) =
+        create_network_interface(wifi, WifiMode::Sta, &mut socket_set_entries);
+    let wifi_stack = WifiStack::new(iface, device, sockets, current_millis);
+
+    let rngp = Rng::new(peripherals.RNG);
+    
+
+    initialize(
+        timer,
+        rngp,
+        system.radio_clock_control,
+        &clocks,
+    )
+    .unwrap();
+
+    println!("Call wifi_connect");
+    let client_config = Configuration::Client(ClientConfiguration {
+        ssid: SSID.into(),
+        password: PASSWORD.into(),
+        ..Default::default()
+    });
+
+    controller.set_configuration(&client_config).unwrap();
+    controller.start().unwrap();
+    controller.connect().unwrap();
+
+    println!("Wait to get connected");
+    loop {
+        let res = controller.is_connected();
+        match res {
+            Ok(connected) => {
+                if connected {
+                    break;
+                }
+            }
+            Err(err) => {
+                println!("{:?}", err);
+                loop {}
+            }
+        }
+    }
+
+    println!("Wait to get an ip address");
+    loop {
+        wifi_stack.work();
+
+        if wifi_stack.is_iface_up() {
+            println!("Got ip {:?}", wifi_stack.get_ip_info());
+            break;
+        }
+    }
+
+    println!("We are connected!");
+
+    println!("Making HTTP request");
+    let mut rx_buffer = [0u8; 1536];
+    let mut tx_buffer = [0u8; 1536];
+    let mut socket = wifi_stack.get_socket(&mut rx_buffer, &mut tx_buffer);
+
+    socket.work();
+
+    socket
+        .open(IpAddress::Ipv4(Ipv4Address::new(52, 28, 41, 87)), 8883)
+        .unwrap();
+
+    let certificates = Certificates {
+        certs: Some(CERT),
+        client_cert: Some(CLIENT_CERT),
+        client_key: Some(PRIVATE_KEY),
+        password: None,
+    };
+
+    let tls = Session::new(
+        socket,
+        "a3j3y1mdtdmkz5-ats.iot.eu-central-1.amazonaws.com",
+        Mode::Client,
+        TlsVersion::Tls1_2,
+        certificates,
+    )
+    .unwrap();
+
+    println!("Start tls connect");
+    tls.connect().unwrap();
+
+    println!("Tls connected. Standby...");
 
     // Create a new peripheral object with the described wiring
     // and standard I2C clock speed
@@ -129,7 +237,7 @@ fn main() -> ! {
         println!("| Temperature {:.2}°C    |", temp);
         println!("| Humidity {:.2}%        |", hum);
         println!("| Pressure {:.2}hPa     |", pres);
-        println!("| Gas Resistance {:.2}Ω |", gas);
+        println!("| Gas Resistance {:.2}Ω ", gas);
         println!("|========================|");
 
         update_data(&mut display, temp, 54, 24);
