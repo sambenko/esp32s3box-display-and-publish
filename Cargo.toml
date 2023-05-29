@@ -19,5 +19,7 @@ embedded-graphics = "0.8.0"
 mipidsi = { version = "0.7", git = "https://github.com/georgik/mipidsi.git", branch = "bugfix/ili-init" }
 ui = { path = "./ui"}
 
+bme680 = "0.6.0"
+
 [features]
 default = [ "esp32s3-hal/eh1" ]
