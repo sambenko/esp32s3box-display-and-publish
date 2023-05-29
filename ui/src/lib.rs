@@ -47,7 +47,7 @@ where
             .build();
 
         RoundedRectangle::with_equal_corners(
-            Rectangle::new(Point::new(220, pos), Size::new(65, 35)),
+            Rectangle::new(Point::new(220, pos), Size::new(67, 35)),
             Size::new(10, 10),
         )
         .into_styled(style)
@@ -79,7 +79,7 @@ where
 
         field(display, 171, 10);
 
-        let labels = ["Temperature(°C)", "Humidity(%)", "Pressure(Pa)", "Air quality"];
+        let labels = ["Temperature(°C)", "Humidity(%)", "Pressure(hPa)", "Air quality"];
 
         let mut l = 0;
         let mut pos_y = 52;
@@ -91,33 +91,27 @@ where
         }
 }
 
-pub fn update_temperature<D>(display: &mut D, temperature: f32)
+pub fn update_data<D>(display: &mut D, sensor_data: f32, pos_y: i32, offset: i32)
 where 
     D:DrawTarget<Color = Rgb565>+Dimensions {
 
-        let temperature_position = Point::new(229, 54);
-
         let text_style = MonoTextStyle::new(&PROFONT_18_POINT, RgbColor::BLACK);
 
-        let mut temperature_data: heapless::String<16> = heapless::String::new();
-
-        write!(temperature_data,"{:.1}", temperature).unwrap();
-
+        let position: Point = Point::new(229, pos_y);
+        let mut data: heapless::String<16> = heapless::String::new();
+        write!(data,"{:.2}", sensor_data).unwrap();
         let mut clear_string = heapless::String::<16>::new();
-        for _ in 0..temperature_data.len() {
+        for _ in 0..data.len() {
             clear_string.push(' ').unwrap_or_default();
         }
+        // By redrawing the field, we clear the data
+        field(display, pos_y-offset, -1);
 
-        // By redrawing the field, we clear the temperature data
-        field(display, 30, -1);
-
-        // Draw the new temperature data
+        // Draw the new data
         Text::new(
-            &temperature_data, 
-            temperature_position, 
+            &data, 
+            position, 
             text_style
         )
         .draw(display);
-
-        
 }
