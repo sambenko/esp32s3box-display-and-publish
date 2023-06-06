@@ -28,6 +28,7 @@ use embedded_svc::{
 use esp_wifi::{
     current_millis,
     initialize,
+    EspWifiInitFor,
     wifi::{utils::create_network_interface, WifiMode},
     wifi_interface::WifiStack,
 };
@@ -109,22 +110,22 @@ fn main() -> ! {
 
     build_ui(&mut display);
 
-    let (wifi, _) = peripherals.RADIO.split();
-    let mut socket_set_entries: [SocketStorage; 3] = Default::default();
-    let (iface, device, mut controller, sockets) =
-        create_network_interface(wifi, WifiMode::Sta, &mut socket_set_entries);
-    let wifi_stack = WifiStack::new(iface, device, sockets, current_millis);
-
     let rngp = Rng::new(peripherals.RNG);
-    
 
-    initialize(
+    let init = initialize(
+        EspWifiInitFor::Wifi,
         timer,
         rngp,
         system.radio_clock_control,
         &clocks,
     )
     .unwrap();
+
+    let (wifi, _) = peripherals.RADIO.split();
+    let mut socket_set_entries: [SocketStorage; 3] = Default::default();
+    let (iface, device, mut controller, sockets) =
+        create_network_interface(&init, wifi, WifiMode::Sta, &mut socket_set_entries);
+    let wifi_stack = WifiStack::new(iface, device, sockets, current_millis);
 
     println!("Call wifi_connect");
     let client_config = Configuration::Client(ClientConfiguration {
