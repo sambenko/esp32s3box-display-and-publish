@@ -45,7 +45,7 @@ use smoltcp::{
     iface::SocketStorage, 
     wire::{ IpAddress, Ipv4Address }
 };
-use esp_mbedtls::{ Mode, TlsVersion };
+use esp_mbedtls::{ Mode, TlsVersion, X509 };
 use esp_mbedtls::{ Certificates, Session };
 
 use bme680::*;
@@ -178,9 +178,9 @@ fn main() -> ! {
         .unwrap();
 
     let certificates = Certificates {
-        certs: Some(CERT),
-        client_cert: Some(CLIENT_CERT),
-        client_key: Some(PRIVATE_KEY),
+        certs: Some(X509::pem(CERT.as_bytes()).unwrap()),
+        client_cert: Some(X509::pem(CLIENT_CERT.as_bytes()).unwrap()),
+        client_key: Some(X509::pem(PRIVATE_KEY.as_bytes()).unwrap()),
         password: None,
     };
 
