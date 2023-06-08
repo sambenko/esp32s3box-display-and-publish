@@ -6,7 +6,7 @@
     <img src="images/display_sensor_data.jpg" alt="Sensor data displayed" width="556.35" height="449.36">
   </a>
 
-<h3 align="center">Display sensor data (and some other things)</h3>
+<h1 align="center">Display sensor data (and some other things)</h1>
 
   <p align="center">
     This project focuses on displaying temperature, humidity and atmospheric pressure captured by the <a href="https://shop.pimoroni.com/products/bme680-breakout?variant=12491552129107"> BME680 sensor </a> on <a href="https://github.com/espressif/esp-box/"> ESP32-S3 Box </a>
