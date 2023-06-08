@@ -39,7 +39,7 @@ use esp_println::println;
 use display_interface_spi::SPIInterfaceNoCS;
 use mipidsi::{ColorOrder, Orientation};
 
-use ui::{ build_ui, update_data};
+extern crate ui;
 
 use smoltcp::{
     iface::SocketStorage, 
@@ -108,7 +108,7 @@ fn main() -> ! {
 
     display.clear(Rgb565::WHITE).unwrap();
 
-    build_ui(&mut display);
+    ui::build_ui(&mut display);
 
     let rngp = Rng::new(peripherals.RNG);
 
@@ -241,9 +241,9 @@ fn main() -> ! {
         println!("| Gas Resistance {:.2}Ω ", gas);
         println!("|========================|");
 
-        update_data(&mut display, temp, 54, 24);
-        update_data(&mut display, hum, 99, 22);
-        update_data(&mut display, pres, 148, 23);
+        ui::temperature::update_temperature(&mut display, temp);
+        ui::humidity::update_humidity(&mut display, hum);
+        ui::pressure::update_pressure(&mut display, pres);
 
         delay.delay_ms(10000u32);
     }
