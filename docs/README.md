@@ -9,7 +9,7 @@
 <h3 align="center">Display sensor data (and some other things)</h3>
 
   <p align="center">
-    This project focuses on displaying data captured by the <a href="https://shop.pimoroni.com/products/bme680-breakout?variant=12491552129107"> BME680 sensor </a> on <a href="https://github.com/espressif/esp-box/"> ESP32-S3 Box </a>
+    This project focuses on displaying temperature, humidity and atmospheric pressure captured by the <a href="https://shop.pimoroni.com/products/bme680-breakout?variant=12491552129107"> BME680 sensor </a> on <a href="https://github.com/espressif/esp-box/"> ESP32-S3 Box </a>
   </p>
 </div>
 
