@@ -3,7 +3,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/sambenko/display-sensor-data">
-    <img src="images/sensor_display.jpg" alt="Sensor data displayed" width="300" height="300">
+    <img src="images/display_sensor_data.jpg" alt="Sensor data displayed" width="300" height="300">
   </a>
 
 <h3 align="center">Display sensor data <b>WIP</b></h3>
