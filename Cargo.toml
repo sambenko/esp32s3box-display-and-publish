@@ -20,7 +20,11 @@ embedded-graphics = "0.8.0"
 mipidsi = "0.7.1"
 ui = { path = "./ui"}
 
+embedded-nal = "0.7.0"
 esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git" }
+minimq = "0.7.0"
+embedded-time = "0.12.1"
+
 bme680 = "0.6.0"
 
 [features]
