@@ -20,6 +20,10 @@ use esp32s3_hal::{
     spi
 };
 
+mod adapter;
+
+use embedded_nal::TcpClientStack;
+
 use embedded_svc::{
     ipv4::Interface,
     wifi::{ClientConfiguration, Configuration, Wifi},
@@ -41,20 +45,21 @@ use mipidsi::{ColorOrder, Orientation};
 
 extern crate ui;
 
-use smoltcp::{
-    iface::SocketStorage, 
-    wire::{ IpAddress, Ipv4Address }
-};
-use esp_mbedtls::{ Mode, TlsVersion, X509 };
-use esp_mbedtls::{ Certificates, Session };
+use smoltcp::iface::SocketStorage;
+
+use esp_mbedtls::X509;
+use esp_mbedtls::Certificates;
+
+use minimq::{Minimq, Publication};
 
 use bme680::*;
 
 const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
-const CERT: &'static str = concat!(include_str!("../certs/AmazonRootCA1.pem"), "\0");
-const CLIENT_CERT: &'static str = concat!(include_str!("../certs/device-certificate.pem.crt"), "\0");
-const PRIVATE_KEY: &'static str = concat!(include_str!("../certs/private.pem.key"), "\0");
+const CERT: &'static str = concat!(include_str!("../secrets/AmazonRootCA1.pem"), "\0");
+const CLIENT_CERT: &'static str = concat!(include_str!("../secrets/device-certificate.pem.crt"), "\0");
+const PRIVATE_KEY: &'static str = concat!(include_str!("../secrets/private.pem.key"), "\0");
+const ENDPOINT: &'static str = include_str!("../secrets/endpoint.txt");
 
 #[entry]
 fn main() -> ! {
@@ -134,9 +139,13 @@ fn main() -> ! {
         ..Default::default()
     });
 
-    controller.set_configuration(&client_config).unwrap();
+    let res = controller.set_configuration(&client_config);
+    println!("wifi_set_configuration returned {:?}", res);
+
     controller.start().unwrap();
-    controller.connect().unwrap();
+    println!("is wifi started: {:?}", controller.is_started());
+
+    println!("wifi_connect {:?}", controller.connect());
 
     println!("Wait to get connected");
     loop {
@@ -153,29 +162,25 @@ fn main() -> ! {
             }
         }
     }
+    println!("{:?}", controller.is_connected());
 
+    let mut local_ip = [0u8; 4];
     println!("Wait to get an ip address");
     loop {
         wifi_stack.work();
 
         if wifi_stack.is_iface_up() {
             println!("Got ip {:?}", wifi_stack.get_ip_info());
+            local_ip.copy_from_slice(&wifi_stack.get_ip_info().unwrap().ip.octets());
             break;
         }
     }
 
     println!("We are connected!");
 
-    println!("Making HTTP request");
     let mut rx_buffer = [0u8; 1536];
     let mut tx_buffer = [0u8; 1536];
-    let mut socket = wifi_stack.get_socket(&mut rx_buffer, &mut tx_buffer);
-
-    socket.work();
-
-    socket
-        .open(IpAddress::Ipv4(Ipv4Address::new(52, 28, 41, 87)), 8883)
-        .unwrap();
+    let socket = wifi_stack.get_socket(&mut rx_buffer, &mut tx_buffer);
 
     let certificates = Certificates {
         certs: Some(X509::pem(CERT.as_bytes()).unwrap()),
@@ -184,19 +189,32 @@ fn main() -> ! {
         password: None,
     };
 
-    let tls = Session::new(
+    let mut nal = adapter::WifiTcpClientStack::new([adapter::WrappedSocket::new(
         socket,
-        "a3j3y1mdtdmkz5-ats.iot.eu-central-1.amazonaws.com",
-        Mode::Client,
-        TlsVersion::Tls1_2,
+        ENDPOINT,
         certificates,
+    )]);
+
+    println!("Endpoint: {}", ENDPOINT);
+
+    let mut s = nal.socket().unwrap();
+
+    println!("Start tls connect");
+
+    nal.connect(
+        &mut s,
+        embedded_nal::SocketAddr::V4(embedded_nal::SocketAddrV4::new(
+            embedded_nal::Ipv4Addr::new(3, 124, 161, 238),
+            8883,
+        )),
     )
     .unwrap();
 
-    println!("Start tls connect");
-    tls.connect().unwrap();
+    println!("Tls connected. Initializing MQTT client");
 
-    println!("Tls connected. Standby...");
+    nal.close(s).unwrap();
+
+    println!("Socket closed.");
 
     // Create a new peripheral object with the described wiring
     // and standard I2C clock speed
