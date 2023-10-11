@@ -30,9 +30,6 @@ esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git", package = "es
 bme680 = "0.6.0"
 
 display-interface-spi = "0.4"
-embedded-graphics = "0.8.0"
+embedded-graphics = "0.8.1"
 mipidsi = "0.7.1"
 ui = { path = "./ui"}
-
-[features]
-default = [ "esp32s3-hal/eh1" ]
