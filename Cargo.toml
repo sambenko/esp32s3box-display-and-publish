@@ -25,7 +25,7 @@ embedded-can       = { version = "0.4.1" }
 static_cell       = "1.1.0"
 
 rust-mqtt = { version = "0.1.5", default-features = false, features = ["tls"]}
-esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git", package = "esp-mbedtls", features = ["async"]}
+esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git", package = "esp-mbedtls", features = ["esp32s3", "async"]}
 
 bme680 = "0.6.0"
 
