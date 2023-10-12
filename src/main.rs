@@ -365,7 +365,7 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
 
             let (data, _state) = bme.get_sensor_data(&mut delay).expect("Failed to get sensor data");
             
-            let temperature = data.temperature_celsius();
+            let temp = data.temperature_celsius();
             let hum = data.humidity_percent();
             let pres = data.pressure_hpa();
             let gas = data.gas_resistance_ohm();
@@ -383,13 +383,13 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
 
             // Convert data into Strings
             let mut temperature_string: String<32> = String::new();
-            write!(temperature_string, "{:.2}", temperature).expect("write! failed!");
+            write!(temperature_string, "{:.2}", temp).expect("write! failed!");
 
             let mut pressure_string: String<32> = String::new();
-            write!(pressure_string, "{:.2}", pressure).expect("write! failed!");
+            write!(pressure_string, "{:.2}", pres).expect("write! failed!");
 
             let mut humidity_string: String<32> = String::new();
-            write!(humidity_string, "{:.2}", humidity).expect("write! failed!");
+            write!(humidity_string, "{:.2}", hum).expect("write! failed!");
 
             let mut gas_string: String<32> = String::new();
             write!(gas_string, "{:.2}", gas).expect("write! failed!");
