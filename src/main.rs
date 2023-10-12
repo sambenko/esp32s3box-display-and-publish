@@ -10,7 +10,7 @@ use embedded_graphics::{
 };
 use display_interface_spi::SPIInterfaceNoCS;
 use mipidsi::{ColorOrder, Orientation};
-// extern crate ui;
+extern crate ui;
 
 // peripherals imports
 use hal::{
@@ -123,36 +123,36 @@ fn main() -> ! {
             Err(..) => panic!("WiFi mode Error!"),
         };
 
-    // let sclk = io.pins.gpio7;
-    // let mosi = io.pins.gpio6;
-    // let mut backlight = io.pins.gpio45.into_push_pull_output();
+    let sclk = io.pins.gpio7;
+    let mosi = io.pins.gpio6;
+    let mut backlight = io.pins.gpio45.into_push_pull_output();
 
-    // backlight.set_high().unwrap();
+    backlight.set_high().unwrap();
 
-    // let spi = spi::Spi::new_no_cs_no_miso(
-    //     peripherals.SPI2,
-    //     sclk,
-    //     mosi,
-    //     60u32.MHz(),
-    //     spi::SpiMode::Mode0,
-    //     &mut system.peripheral_clock_control,
-    //     &clocks,
-    // );
+    let spi = spi::Spi::new_no_cs_no_miso(
+        peripherals.SPI2,
+        sclk,
+        mosi,
+        60u32.MHz(),
+        spi::SpiMode::Mode0,
+        &mut system.peripheral_clock_control,
+        &clocks,
+    );
     
-    // let di = SPIInterfaceNoCS::new(spi, io.pins.gpio4.into_push_pull_output());
-    // let reset = io.pins.gpio48.into_push_pull_output();
-    // let mut delay = Delay::new(&clocks);
+    let di = SPIInterfaceNoCS::new(spi, io.pins.gpio4.into_push_pull_output());
+    let reset = io.pins.gpio48.into_push_pull_output();
+    let mut delay = Delay::new(&clocks);
 
-    // let mut display = mipidsi::Builder::ili9342c_rgb565(di)
-    //     .with_display_size(320, 240)
-    //     .with_orientation(Orientation::PortraitInverted(false))
-    //     .with_color_order(ColorOrder::Bgr)
-    //     .init(&mut delay, Some(reset))
-    //     .unwrap();
+    let mut display = mipidsi::Builder::ili9342c_rgb565(di)
+        .with_display_size(320, 240)
+        .with_orientation(Orientation::PortraitInverted(false))
+        .with_color_order(ColorOrder::Bgr)
+        .init(&mut delay, Some(reset))
+        .unwrap();
 
-    // display.clear(Rgb565::WHITE).unwrap();
+    display.clear(Rgb565::WHITE).unwrap();
 
-    // ui::build_ui(&mut display);
+    ui::build_ui(&mut display);
     
     let i2c = I2C::new(
         peripherals.I2C0,
@@ -241,6 +241,7 @@ async fn net_task(stack: &'static Stack<WifiDevice<'static>>) {
 
 #[embassy_executor::task]
 async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0>, mut delay:Delay) {
+
     let mut rx_buffer = [0; 4096];
     let mut tx_buffer = [0; 4096];
 
