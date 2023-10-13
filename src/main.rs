@@ -114,7 +114,6 @@ fn main() -> ! {
     );
 
     let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
-    let delay = Delay::new(&clocks);
     
     let (wifi, _) = peripherals.RADIO.split();
     let (wifi_interface, controller) =
@@ -194,7 +193,7 @@ async fn connection(mut controller: WifiController<'static>) {
             WifiState::StaConnected => {
                 // wait until we're no longer connected
                 controller.wait_for_event(WifiEvent::StaDisconnected).await;
-                Timer::after(Duration::from_millis(5000)).await
+                sleep(5000).await;
             }
             _ => {}
         }
@@ -228,7 +227,7 @@ async fn connection(mut controller: WifiController<'static>) {
             Ok(_) => println!("Wifi connected!"),
             Err(e) => {
                 println!("Failed to connect to wifi: {e:?}");
-                Timer::after(Duration::from_millis(5000)).await
+                sleep(5000).await;
             }
         }
     }
@@ -250,7 +249,7 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
         if stack.is_link_up() {
             break;
         }
-        Timer::after(Duration::from_millis(500)).await;
+        sleep(500).await;
     }
 
     println!("Waiting to get IP address...");
@@ -259,11 +258,11 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
             println!("Got IP: {}", config.address); //dhcp IP address
             break;
         }
-        Timer::after(Duration::from_millis(500)).await;
+        sleep(500).await;
     }
 
     loop {
-        Timer::after(Duration::from_millis(1_000)).await;
+        sleep(1000).await;
 
         let mut socket = TcpSocket::new(&stack, &mut rx_buffer, &mut tx_buffer);
 
@@ -483,7 +482,7 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
                 },
             }
 
-            Timer::after(Duration::from_millis(3000)).await;
+            sleep(3000).await;
         }
     }
 }
