@@ -122,36 +122,88 @@ fn main() -> ! {
             Err(..) => panic!("WiFi mode Error!"),
         };
 
-    let sclk = io.pins.gpio7;
-    let mosi = io.pins.gpio6;
-    let mut backlight = io.pins.gpio45.into_push_pull_output();
-
-    backlight.set_high().unwrap();
-
-    let spi = spi::Spi::new_no_cs_no_miso(
-        peripherals.SPI2,
-        sclk,
-        mosi,
-        60u32.MHz(),
-        spi::SpiMode::Mode0,
-        &mut system.peripheral_clock_control,
-        &clocks,
-    );
-    
-    let di = SPIInterfaceNoCS::new(spi, io.pins.gpio4.into_push_pull_output());
-    let reset = io.pins.gpio48.into_push_pull_output();
     let mut delay = Delay::new(&clocks);
 
-    let mut display = mipidsi::Builder::ili9342c_rgb565(di)
-        .with_display_size(320, 240)
-        .with_orientation(Orientation::PortraitInverted(false))
-        .with_color_order(ColorOrder::Bgr)
-        .init(&mut delay, Some(reset))
-        .unwrap();
+    // Initialize display
+    #[cfg(feature = "esp32s3box")]
+    {
+        let sclk = io.pins.gpio7;
+        let mosi = io.pins.gpio6;
 
-    display.clear(Rgb565::WHITE).unwrap();
+        let dc = io.pins.gpio4.into_push_pull_output();
+        let mut backlight = io.pins.gpio45.into_push_pull_output();
+        let reset = io.pins.gpio48.into_push_pull_output();
 
-    ui::build_ui(&mut display);
+        backlight.set_high().unwrap();
+
+        let spi = spi::Spi::new_no_cs_no_miso(
+            peripherals.SPI2,
+            sclk,
+            mosi,
+            60u32.MHz(),
+            spi::SpiMode::Mode0,
+            &mut system.peripheral_clock_control,
+            &clocks,
+        );
+
+        let di = SPIInterfaceNoCS::new(spi, dc);
+
+        let mut display = mipidsi::Builder::ili9342c_rgb565(di)
+            .with_display_size(320, 240)
+            .with_orientation(Orientation::PortraitInverted(false))
+            .with_color_order(ColorOrder::Bgr)
+            .init(&mut delay, Some(reset))
+            .unwrap();
+
+        display.clear(Rgb565::WHITE).unwrap();
+
+        ui::build_ui(&mut display);
+    }
+
+    #[cfg(feature = "esp32s3box_lite")]
+    {
+        let sclk = io.pins.gpio7;
+        let mosi = io.pins.gpio6;
+        let miso = io.pins.gpio19;
+        let cs = io.pins.gpio5;
+
+        let dc = io.pins.gpio4.into_push_pull_output();
+        let mut backlight = io.pins.gpio45.into_push_pull_output();
+        let reset = io.pins.gpio48.into_push_pull_output();
+
+        backlight.set_high().unwrap();
+
+        let spi = spi::Spi::new(
+            peripherals.SPI2,
+            sclk,
+            mosi,
+            miso,
+            cs,
+            60u32.MHz(),
+            spi::SpiMode::Mode0,
+            &mut system.peripheral_clock_control,
+            &clocks,
+        );
+
+        let di = SPIInterfaceNoCS::new(spi, dc);
+        delay.delay_ms(500u32);
+
+        let mut display = match mipidsi::Builder::st7789(di)
+            .with_display_size(240, 320)
+            .with_orientation(Orientation::LandscapeInverted(true))
+            .with_color_order(ColorOrder::Rgb)
+            .with_invert_colors(ColorInversion::Inverted)
+            .init(&mut delay, Some(reset)) {
+            Ok(display) => display,
+            Err(_) => {
+                panic!("Display initialization failed");
+            }
+        };
+
+        backlight.set_low().unwrap();
+
+        ui::build_ui(&mut display);
+    }
     
     let i2c = I2C::new(
         peripherals.I2C0,
