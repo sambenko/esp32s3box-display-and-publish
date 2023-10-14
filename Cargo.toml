@@ -33,3 +33,9 @@ display-interface-spi = "0.4"
 embedded-graphics = "0.8.1"
 mipidsi = "0.7.1"
 ui = { path = "./ui"}
+
+[features]
+default = ["esp32s3box"]
+esp32s3box = []
+esp32s3box_lite = []
+
