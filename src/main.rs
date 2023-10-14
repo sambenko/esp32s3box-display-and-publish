@@ -9,7 +9,7 @@ use embedded_graphics::{
     pixelcolor::Rgb565, prelude::*,
 };
 use display_interface_spi::SPIInterfaceNoCS;
-use mipidsi::{ColorOrder, Orientation};
+use mipidsi::{ColorOrder, Orientation, ColorInversion};
 extern crate ui;
 
 // peripherals imports
