@@ -49,7 +49,7 @@ Currently, this project is specifically designed for the ESP32S3-BOX device usin
 - ESP32S3-BOX devkit 🛠
 - BME680 environmental sensor 🌡
 
-For Software Requirements, Hardware Setup, and Running the Program, please refer to the corresponding sections in the [esp32s3 no_std Async TLS MQTT](https://github.com/sambenko/esp32s3-no-std-async-tls-mqtt).
+For Software Requirements, Hardware Setup, Setting up MQTT, secrets/ folder and Running the Program, please refer to the corresponding sections in the [esp32s3 no_std Async TLS MQTT](https://github.com/sambenko/esp32s3-no-std-async-tls-mqtt).
 
 
 
