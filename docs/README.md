@@ -23,7 +23,7 @@ Display real-time sensor data from a BME680 sensor on the ESP32S3-BOX device usi
 
 This project extends upon the previous [esp32s3 no_std Async TLS MQTT](https://github.com/sambenko/esp32s3-no-std-async-tls-mqtt) to utilize the display of ESP32S3-BOX and showing real-time data from a BME680 sensor 🌡. Measurements of Temperature, Humidity and Gas Resistance are displayed and are updated every X seconds.
 
-[🔝 back to top](#table-of-contents)
+[🔝 back to top](#-table-of-contents)
 
 ---
 
@@ -32,7 +32,7 @@ This project extends upon the previous [esp32s3 no_std Async TLS MQTT](https://g
 - [mipidsi](https://github.com/almindor/mipidsi) for the display drivers 🖥
 - [embedded-graphics](https://github.com/embedded-graphics/embedded-graphics) for UI elements 🎨
 
-[🔝 back to top](#table-of-contents)
+[🔝 back to top](#-table-of-contents)
 
 ---
 
@@ -53,5 +53,5 @@ For Software Requirements, Hardware Setup, and Running the Program, please refer
 
 
 
-[🔝 back to top](#table-of-contents)
+[🔝 back to top](#-table-of-contents)
 
