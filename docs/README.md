@@ -1,37 +1,57 @@
-<a name="readme-top"></a>
+# 📊 ESP32S3-BOX Sensor Data Display
 
-<br />
-<div align="center">
-  <a href="https://github.com/sambenko/display-sensor-data">
-    <img src="images/display_sensor_data.jpg" alt="Sensor data displayed" width="556.35" height="449.36">
-  </a>
+Display real-time sensor data from a BME680 sensor on the ESP32S3-BOX device using no_std Rust! 🦀
 
-<h1 align="center">Display sensor data (and some other things)</h1>
+![Sensor data displayed](images/display_sensor_data.jpg)
 
-  <p align="center">
-    This project focuses on displaying temperature, humidity and atmospheric pressure captured by the <a href="https://shop.pimoroni.com/products/bme680-breakout?variant=12491552129107"> BME680 sensor </a> on <a href="https://github.com/espressif/esp-box/"> ESP32-S3 Box </a>
-  </p>
-</div>
+📚 Using functionality from my other project: [esp32s3 no_std Async TLS MQTT](https://github.com/sambenko/esp32s3-no-std-async-tls-mqtt)
 
-## Current stage of development
+---
 
-Apart from displaying sensor data on the screen and updating it every 10 seconds, the program can:
-  <li> connect to the wifi using <a href="https://github.com/esp-rs/esp-wifi">esp-wifi</a></li>
-  <li>create a tls session using <a href="https://github.com/esp-rs/esp-mbedtls">esp-mbedtls</a> with successful connection</li>
-  
-<h3> All that using no_std Rust!! </h3>
-  
-Some functionalities will be separated to their own repositories in the future.
+## 📋 Table of Contents
 
-## Endgoal
-
-Sending sensor data to AWS IoT Core for further analysis.
-
-## WIP
-
-<li>lightweight MQTT in no_std Rust</li>
+- [🎯 About The Project](#-about-the-project)
+- [🎨 Graphical Crates](#-graphical-crates)
+- [📟 Device Support](#-device-support)
+- [🔧 Prerequisites and Getting Started](#-prerequisites-and-getting-started)
+  - [Hardware Specific to This Project](#hardware-specific-to-this-project)
 
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+---
 
+## 🎯 About The Project
+
+This project extends upon the previous [esp32s3 no_std Async TLS MQTT](https://github.com/sambenko/esp32s3-no-std-async-tls-mqtt) to utilize the display of ESP32S3-BOX and showing real-time data from a BME680 sensor 🌡. Measurements of Temperature, Humidity and Gas Resistance are displayed and are updated every X seconds.
+
+[🔝 back to top](#table-of-contents)
+
+---
+
+## 🎨 Graphical Crates
+
+- [mipidsi](https://github.com/almindor/mipidsi) for the display drivers 🖥
+- [embedded-graphics](https://github.com/embedded-graphics/embedded-graphics) for UI elements 🎨
+
+[🔝 back to top](#table-of-contents)
+
+---
+
+## 📟 Device Support
+
+Currently, this project is specifically designed for the ESP32S3-BOX device using the ili9342c display driver. Feature flags for ESP32S3-BOX-LITE and the brand-new ESP32S3-BOX-3, which require different display drivers or initialisations, are under development.
+
+---
+
+## 🔧 Prerequisites and Getting Started
+
+### Hardware Specific to This Project
+
+- ESP32S3-BOX devkit 🛠
+- BME680 environmental sensor 🌡
+
+For Software Requirements, Hardware Setup, and Running the Program, please refer to the corresponding sections in the [esp32s3 no_std Async TLS MQTT](https://github.com/sambenko/esp32s3-no-std-async-tls-mqtt).
+
+
+
+[🔝 back to top](#table-of-contents)
 
