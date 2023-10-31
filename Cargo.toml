@@ -1,5 +1,5 @@
 [package]
-name = "display_sensor_data"
+name = "esp32s3box_display_and_publish"
 version = "0.1.0"
 authors = ["sambenko <sam.benko@gmail.com>"]
 edition = "2021"
@@ -33,4 +33,3 @@ display-interface-spi = "0.4"
 embedded-graphics = "0.8.1"
 mipidsi = "0.7.1"
 esp_box_ui = {git = "https://github.com/sambenko/esp-box-ui.git"}
-

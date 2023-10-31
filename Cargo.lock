@@ -237,35 +237,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "display_sensor_data"
-version = "0.1.0"
-dependencies = [
- "bme680",
- "display-interface-spi",
- "embassy-executor",
- "embassy-net",
- "embassy-time",
- "embedded-can",
- "embedded-graphics",
- "embedded-hal 1.0.0-rc.1",
- "embedded-hal-async",
- "embedded-hal-nb",
- "embedded-io 0.6.1",
- "embedded-svc",
- "esp-backtrace",
- "esp-mbedtls",
- "esp-println",
- "esp-wifi",
- "esp32s3-hal",
- "esp_box_ui",
- "heapless",
- "mipidsi",
- "nb 1.1.0",
- "rust-mqtt",
- "static_cell",
-]
-
-[[package]]
 name = "embassy-executor"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -808,6 +779,35 @@ checksum = "3f64ce29b9649d2ab4778525362388831f8fa7653052a7ad15ec970048bb9b49"
 dependencies = [
  "embassy-time",
  "esp-hal-common",
+]
+
+[[package]]
+name = "esp32s3box_display_and_publish"
+version = "0.1.0"
+dependencies = [
+ "bme680",
+ "display-interface-spi",
+ "embassy-executor",
+ "embassy-net",
+ "embassy-time",
+ "embedded-can",
+ "embedded-graphics",
+ "embedded-hal 1.0.0-rc.1",
+ "embedded-hal-async",
+ "embedded-hal-nb",
+ "embedded-io 0.6.1",
+ "embedded-svc",
+ "esp-backtrace",
+ "esp-mbedtls",
+ "esp-println",
+ "esp-wifi",
+ "esp32s3-hal",
+ "esp_box_ui",
+ "heapless",
+ "mipidsi",
+ "nb 1.1.0",
+ "rust-mqtt",
+ "static_cell",
 ]
 
 [[package]]
