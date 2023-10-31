@@ -32,10 +32,5 @@ bme680 = "0.6.0"
 display-interface-spi = "0.4"
 embedded-graphics = "0.8.1"
 mipidsi = "0.7.1"
-ui = { path = "./ui"}
-
-[features]
-default = ["esp32s3box"]
-esp32s3box = []
-esp32s3box_lite = []
+esp_box_ui = {git = "https://github.com/sambenko/esp-box-ui.git"}
 
