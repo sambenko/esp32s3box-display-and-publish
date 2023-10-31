@@ -1,6 +1,6 @@
-# 📊 ESP32S3-BOX Sensor Data Display
+# 📊 ESP32S3-BOX Display and Publish
 
-Display real-time sensor data from a BME680 sensor on the ESP32S3-BOX device using no_std Rust! 🦀
+Display real-time sensor data from a BME680 sensor on the ESP32S3-BOX device and publish it using no_std Rust! 🦀
 
 ![Sensor data displayed](images/display_sensor_data.jpg)
 
@@ -30,7 +30,7 @@ This project extends upon the previous [esp32s3 no_std Async TLS MQTT](https://g
 ## 🎨 Graphical Crates
 
 - [mipidsi](https://github.com/almindor/mipidsi) for the display drivers 🖥
-- [embedded-graphics](https://github.com/embedded-graphics/embedded-graphics) for UI elements 🎨
+- [esp-box-ui](https://github.com/sambenko/esp-box-ui) for UI elements 🎨
 
 [🔝 back to top](#-table-of-contents)
 
@@ -38,7 +38,7 @@ This project extends upon the previous [esp32s3 no_std Async TLS MQTT](https://g
 
 ## 📟 Device Support
 
-Currently, this project is specifically designed for the ESP32S3-BOX device using the ili9342c display driver. Feature flags for ESP32S3-BOX-LITE and the brand-new ESP32S3-BOX-3, which require different display drivers or initialisations, are under development.
+This project is specifically designed for the ESP32S3-BOX device using the ili9342c display driver. Other repositories for ESP32S3-BOX-LITE and the brand-new ESP32S3-BOX-3, which require different display drivers or initialisations, are under development.
 
 ---
 
