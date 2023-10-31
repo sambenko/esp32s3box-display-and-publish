@@ -9,8 +9,8 @@ use embedded_graphics::{
     pixelcolor::Rgb565, prelude::*,
 };
 use display_interface_spi::SPIInterfaceNoCS;
-use mipidsi::{ColorOrder, Orientation, ColorInversion};
-extern crate ui;
+use mipidsi::{ColorOrder, Orientation};
+use esp_box_ui::build_ui;
 
 // peripherals imports
 use hal::{
@@ -124,87 +124,42 @@ fn main() -> ! {
 
     let mut delay = Delay::new(&clocks);
 
-    // Initialize display
-    #[cfg(feature = "esp32s3box")]
-    {
-        let sclk = io.pins.gpio7;
-        let mosi = io.pins.gpio6;
+    let sclk = io.pins.gpio7;
+    let mosi = io.pins.gpio6;
 
-        let dc = io.pins.gpio4.into_push_pull_output();
-        let mut backlight = io.pins.gpio45.into_push_pull_output();
-        let reset = io.pins.gpio48.into_push_pull_output();
+    let dc = io.pins.gpio4.into_push_pull_output();
+    let mut backlight = io.pins.gpio45.into_push_pull_output();
+    let reset = io.pins.gpio48.into_push_pull_output();
 
-        backlight.set_high().unwrap();
+    let spi = spi::Spi::new_no_cs_no_miso(
+        peripherals.SPI2,
+        sclk,
+        mosi,
+        60u32.MHz(),
+        spi::SpiMode::Mode0,
+        &mut system.peripheral_clock_control,
+        &clocks,
+    );
+    let di = SPIInterfaceNoCS::new(spi, dc);
+    delay.delay_ms(500u32);
 
-        let spi = spi::Spi::new_no_cs_no_miso(
-            peripherals.SPI2,
-            sclk,
-            mosi,
-            60u32.MHz(),
-            spi::SpiMode::Mode0,
-            &mut system.peripheral_clock_control,
-            &clocks,
-        );
+    let mut display = match mipidsi::Builder::ili9342c_rgb565(di)
+        .with_display_size(320, 240)
+        .with_orientation(Orientation::PortraitInverted(false))
+        .with_color_order(ColorOrder::Bgr)
+        .init(&mut delay, Some(reset)) {
+        Ok(display) => display,
+        Err(e) => {
+            println!("Display initialization failed: {:?}", e);
+            panic!("Display initialization failed");
+        }
+    };
 
-        let di = SPIInterfaceNoCS::new(spi, dc);
+    backlight.set_high().unwrap();
 
-        let mut display = mipidsi::Builder::ili9342c_rgb565(di)
-            .with_display_size(320, 240)
-            .with_orientation(Orientation::PortraitInverted(false))
-            .with_color_order(ColorOrder::Bgr)
-            .init(&mut delay, Some(reset))
-            .unwrap();
+    display.clear(Rgb565::WHITE).unwrap();
+    build_ui(&mut display);
 
-        display.clear(Rgb565::WHITE).unwrap();
-
-        ui::build_ui(&mut display);
-    }
-
-    #[cfg(feature = "esp32s3box_lite")]
-    {
-        let sclk = io.pins.gpio7;
-        let mosi = io.pins.gpio6;
-        let miso = io.pins.gpio19;
-        let cs = io.pins.gpio5;
-
-        let dc = io.pins.gpio4.into_push_pull_output();
-        let mut backlight = io.pins.gpio45.into_push_pull_output();
-        let reset = io.pins.gpio48.into_push_pull_output();
-
-        backlight.set_high().unwrap();
-
-        let spi = spi::Spi::new(
-            peripherals.SPI2,
-            sclk,
-            mosi,
-            miso,
-            cs,
-            60u32.MHz(),
-            spi::SpiMode::Mode0,
-            &mut system.peripheral_clock_control,
-            &clocks,
-        );
-
-        let di = SPIInterfaceNoCS::new(spi, dc);
-        delay.delay_ms(500u32);
-
-        let mut display = match mipidsi::Builder::st7789(di)
-            .with_display_size(240, 320)
-            .with_orientation(Orientation::LandscapeInverted(true))
-            .with_color_order(ColorOrder::Rgb)
-            .with_invert_colors(ColorInversion::Inverted)
-            .init(&mut delay, Some(reset)) {
-            Ok(display) => display,
-            Err(_) => {
-                panic!("Display initialization failed");
-            }
-        };
-
-        backlight.set_low().unwrap();
-
-        ui::build_ui(&mut display);
-    }
-    
     let i2c = I2C::new(
         peripherals.I2C0,
         io.pins.gpio41,
