@@ -257,12 +257,12 @@ dependencies = [
  "esp-println",
  "esp-wifi",
  "esp32s3-hal",
+ "esp_box_ui",
  "heapless",
  "mipidsi",
  "nb 1.1.0",
  "rust-mqtt",
  "static_cell",
- "ui",
 ]
 
 [[package]]
@@ -340,11 +340,10 @@ dependencies = [
 
 [[package]]
 name = "embassy-time"
-version = "0.1.3"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94a9532d29ec2949c49079d85fd77422e3f4cdc133a71674743cd3b8d5a56a20"
+checksum = "03bcc866a1d3c678da6fa1d28f655a074840b6122123975e156cfca7f1ccc78a"
 dependencies = [
- "atomic-polyfill 1.0.3",
  "cfg-if",
  "critical-section",
  "embedded-hal 0.2.7",
@@ -534,9 +533,9 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "esp-backtrace"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c7d3ecccb0df809cb6ca79b08f863271c0aa24f586df96272988a85d34dfa62"
+checksum = "50f1f532fb2f820e2eeb7e5c7d479cdb8bdd939fe5d5a33c511e94371b0667ae"
 dependencies = [
  "esp-println",
 ]
@@ -621,9 +620,9 @@ dependencies = [
 
 [[package]]
 name = "esp-println"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79b429ea925356d60c10d7214cf0e1777d9578c1287cd50aad09df3c22c4c2f1"
+checksum = "b19cdfb99dbc557daae2052fc6b16a0ee441419f9f4b77b20131c9d62e236ba4"
 dependencies = [
  "critical-section",
 ]
@@ -653,7 +652,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#b86650627544ef86ad9c6ab2c3c5eb577e8e3b38"
+source = "git+https://github.com/esp-rs/esp-wifi#34b818175362f824efeec532639bd94ce371bdee"
 dependencies = [
  "atomic-polyfill 1.0.3",
  "atomic_enum",
@@ -686,7 +685,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi-sys"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#b86650627544ef86ad9c6ab2c3c5eb577e8e3b38"
+source = "git+https://github.com/esp-rs/esp-wifi#34b818175362f824efeec532639bd94ce371bdee"
 dependencies = [
  "anyhow",
 ]
@@ -809,6 +808,17 @@ checksum = "3f64ce29b9649d2ab4778525362388831f8fa7653052a7ad15ec970048bb9b49"
 dependencies = [
  "embassy-time",
  "esp-hal-common",
+]
+
+[[package]]
+name = "esp_box_ui"
+version = "0.1.0"
+source = "git+https://github.com/sambenko/esp-box-ui.git#c51733c438245e0311f2c7105444b07fc397ec30"
+dependencies = [
+ "embedded-graphics",
+ "heapless",
+ "profont",
+ "tinybmp",
 ]
 
 [[package]]
@@ -1034,9 +1044,9 @@ checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
 
 [[package]]
 name = "micromath"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39617bc909d64b068dcffd0e3e31679195b5576d0c83fadc52690268cc2b2b55"
+checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
 
 [[package]]
 name = "minijinja"
@@ -1487,16 +1497,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
-name = "ui"
-version = "0.1.0"
-dependencies = [
- "embedded-graphics",
- "heapless",
- "profont",
- "tinybmp",
-]
-
-[[package]]
 name = "unicode-ident"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1528,9 +1528,9 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 
 [[package]]
 name = "winnow"
-version = "0.5.17"
+version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3b801d0e0a6726477cc207f60162da452f3a95adb368399bef20a946e06f65c"
+checksum = "176b6138793677221d420fd2f0aeeced263f197688b36484660da767bca2fa32"
 dependencies = [
  "memchr",
 ]
