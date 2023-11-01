@@ -499,6 +499,8 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
     }
 }
 
+type MyMqttClient<'a> = rust_mqtt::client::client::MqttClient<'a, esp_mbedtls::asynch::AsyncConnectedSession<'a, embassy_net::tcp::TcpSocket<'a>, 4096>, 5, rust_mqtt::utils::rng_generator::CountingRng>;
+
 pub async fn sleep(millis: u32) {
     Timer::after(Duration::from_millis(millis as u64)).await;
 }
