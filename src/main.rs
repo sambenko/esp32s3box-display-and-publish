@@ -10,7 +10,10 @@ use embedded_graphics::{
 };
 use display_interface_spi::SPIInterfaceNoCS;
 use mipidsi::{ColorOrder, Orientation};
-use esp_box_ui::build_ui;
+use esp_box_ui::{build_ui, temperature::update_temperature, humidity::update_humidity, pressure::update_pressure};
+
+mod embassy_task_ili9342c;
+use embassy_task_ili9342c::EmbassyTaskDisplay;
 
 // peripherals imports
 use hal::{
@@ -143,16 +146,18 @@ fn main() -> ! {
     let di = SPIInterfaceNoCS::new(spi, dc);
     delay.delay_ms(500u32);
 
-    let mut display = match mipidsi::Builder::ili9342c_rgb565(di)
-        .with_display_size(320, 240)
-        .with_orientation(Orientation::PortraitInverted(false))
-        .with_color_order(ColorOrder::Bgr)
-        .init(&mut delay, Some(reset)) {
-        Ok(display) => display,
-        Err(e) => {
-            println!("Display initialization failed: {:?}", e);
-            panic!("Display initialization failed");
-        }
+    let mut display = EmbassyTaskDisplay {
+        inner: match mipidsi::Builder::ili9342c_rgb565(di)
+            .with_display_size(320, 240)
+            .with_orientation(Orientation::PortraitInverted(false))
+            .with_color_order(ColorOrder::Bgr)
+            .init(&mut delay, Some(reset)) {
+            Ok(display) => display,
+            Err(e) => {
+                println!("Display initialization failed: {:?}", e);
+                panic!("Display initialization failed");
+            }
+        },
     };
 
     backlight.set_high().unwrap();
@@ -187,7 +192,7 @@ fn main() -> ! {
     executor.run(|spawner| {
         spawner.spawn(connection(controller)).ok();
         spawner.spawn(net_task(&stack)).ok();
-        spawner.spawn(task(&stack, i2c, delay)).ok();
+        spawner.spawn(task(&stack, i2c, delay, display)).ok();
     });
 }
 
@@ -246,7 +251,7 @@ async fn net_task(stack: &'static Stack<WifiDevice<'static>>) {
 }
 
 #[embassy_executor::task]
-async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0>, mut delay:Delay) {
+async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0>, mut delay:Delay, mut display: EmbassyTaskDisplay<'static>) {
 
     let mut rx_buffer = [0; 4096];
     let mut tx_buffer = [0; 4096];
@@ -384,9 +389,9 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
             println!("| Gas Resistance {:.2}Ω ", gas);
             println!("|========================|");
 
-            // ui::temperature::update_temperature(&mut display, temp);
-            // ui::humidity::update_humidity(&mut display, hum);
-            // ui::pressure::update_pressure(&mut display, pres);
+            update_temperature(&mut display, temp);
+            update_humidity(&mut display, hum);
+            update_pressure(&mut display, pres);
 
             // Convert data into Strings
             let mut temperature_string: String<32> = String::new();
