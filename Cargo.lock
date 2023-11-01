@@ -786,6 +786,7 @@ name = "esp32s3box_display_and_publish"
 version = "0.1.0"
 dependencies = [
  "bme680",
+ "display-interface",
  "display-interface-spi",
  "embassy-executor",
  "embassy-net",
