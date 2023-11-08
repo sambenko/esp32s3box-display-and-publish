@@ -5,7 +5,7 @@ use hal::{
     peripherals::SPI2,
     gpio::{PushPull, Output, GpioPin},
     spi::FullDuplexMode,
-    Spi,
+    spi::master::Spi,
 };
 
 use mipidsi::models::ILI9342CRgb565;
