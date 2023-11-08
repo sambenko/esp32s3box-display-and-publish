@@ -9,7 +9,6 @@ use embedded_graphics::{
     pixelcolor::Rgb565, prelude::*,
 };
 use display_interface_spi::SPIInterfaceNoCS;
-use mipidsi::{ColorOrder, Orientation};
 use esp_box_ui::{build_ui, temperature::update_temperature, humidity::update_humidity, pressure::update_pressure};
 
 mod embassy_task_ili9342c;
@@ -19,21 +18,21 @@ use embassy_task_ili9342c::EmbassyTaskDisplay;
 use hal::{
     clock::{ClockControl, CpuClock},
     i2c::I2C,
-    peripherals::{Interrupt, Peripherals, I2C0},
+    spi::{master::Spi, SpiMode},
+    peripherals::{Peripherals, I2C0},
     prelude::{_fugit_RateExtU32, *},
     timer::TimerGroup,
-    Rng, Rtc, IO, Delay, spi,
-    {embassy, interrupt},
+    Rng, IO, Delay,
+    embassy,
 };
 
 //wifi imports
 use embedded_svc::wifi::{ClientConfiguration, Configuration, Wifi};
-use esp_wifi::wifi::{WifiController, WifiDevice, WifiEvent, WifiMode, WifiState};
+use esp_wifi::wifi::{WifiController, WifiDevice, WifiEvent, WifiStaDevice, WifiState};
 use esp_wifi::{initialize, EspWifiInitFor};
 
 // embassy imports
-use embassy_executor::Executor;
-use embassy_executor::_export::StaticCell;
+use embassy_executor::Spawner;
 use embassy_net::tcp::TcpSocket;
 use embassy_net::dns::DnsQueryType;
 use embassy_net::{Config, Stack, StackResources};
@@ -54,11 +53,10 @@ use bme680::*;
 
 use heapless::String;
 use core::fmt::Write;
+use static_cell::make_static;
 
 use esp_backtrace as _;
 use esp_println::println;
-
-static EXECUTOR: StaticCell<Executor> = StaticCell::new();
 
 const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
@@ -68,39 +66,24 @@ const PRIVATE_KEY: &'static str = concat!(include_str!("../secrets/VendingMachin
 const ENDPOINT: &'static str = include_str!("../secrets/endpoint.txt");
 const CLIENT_ID: &'static str = include_str!("../secrets/client_id.txt");
 
-macro_rules! singleton {
-    ($val:expr) => {{
-        type T = impl Sized;
-        static STATIC_CELL: StaticCell<T> = StaticCell::new();
-        let (x,) = STATIC_CELL.init(($val,));
-        x
-    }};
-}
-
-#[entry]
-fn main() -> ! {
+#[main]
+async fn main(spawner: Spawner) -> ! {
     let peripherals = Peripherals::take();
 
-    let mut system = peripherals.SYSTEM.split();
+    let system = peripherals.SYSTEM.split();
     let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock240MHz).freeze();
-    let mut rtc = Rtc::new(peripherals.RTC_CNTL);
 
     let timer1 = TimerGroup::new(
         peripherals.TIMG1,
         &clocks,
-        &mut system.peripheral_clock_control,
     )
     .timer0;
 
     let timer0 = TimerGroup::new(
         peripherals.TIMG0,
         &clocks,
-        &mut system.peripheral_clock_control,
     )
     .timer0;
-
-    rtc.swd.disable();
-    rtc.rwdt.disable();
 
     let init = initialize(
         EspWifiInitFor::Wifi,
@@ -109,21 +92,18 @@ fn main() -> ! {
         system.radio_clock_control,
         &clocks,
     )
-    .expect("Failed to initialize Wifi");
+    .unwrap();
+
+    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
+    
+    let wifi = peripherals.WIFI;
+    let (wifi_interface, controller) =
+        esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
 
     embassy::init(
         &clocks,
         timer0,
     );
-
-    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
-    
-    let (wifi, _) = peripherals.RADIO.split();
-    let (wifi_interface, controller) =
-        match esp_wifi::wifi::new_with_mode(&init, wifi, WifiMode::Sta) {
-            Ok((wifi_interface, controller)) => (wifi_interface, controller),
-            Err(..) => panic!("WiFi mode Error!"),
-        };
 
     let mut delay = Delay::new(&clocks);
 
@@ -134,23 +114,23 @@ fn main() -> ! {
     let mut backlight = io.pins.gpio45.into_push_pull_output();
     let reset = io.pins.gpio48.into_push_pull_output();
 
-    let spi = spi::Spi::new_no_cs_no_miso(
+    let spi = Spi::new_no_cs_no_miso(
         peripherals.SPI2,
         sclk,
         mosi,
         60u32.MHz(),
-        spi::SpiMode::Mode0,
-        &mut system.peripheral_clock_control,
+        SpiMode::Mode0,
         &clocks,
     );
+
     let di = SPIInterfaceNoCS::new(spi, dc);
     delay.delay_ms(500u32);
 
     let mut display = EmbassyTaskDisplay {
         inner: match mipidsi::Builder::ili9342c_rgb565(di)
             .with_display_size(320, 240)
-            .with_orientation(Orientation::PortraitInverted(false))
-            .with_color_order(ColorOrder::Bgr)
+            .with_orientation(mipidsi::Orientation::PortraitInverted(false))
+            .with_color_order(mipidsi::ColorOrder::Bgr)
             .init(&mut delay, Some(reset)) {
             Ok(display) => display,
             Err(e) => {
@@ -170,7 +150,6 @@ fn main() -> ! {
         io.pins.gpio41,
         io.pins.gpio40,
         100u32.kHz(),
-        &mut system.peripheral_clock_control,
         &clocks,
     );
 
@@ -178,22 +157,18 @@ fn main() -> ! {
 
     let seed = 1234;
 
-    let stack = &*singleton!(Stack::new(
+    let stack = &*make_static!(Stack::new(
         wifi_interface,
         config,
-        singleton!(StackResources::<3>::new()),
+        make_static!(StackResources::<3>::new()),
         seed
     ));
+    
+    spawner.spawn(connection(controller)).ok();
+    spawner.spawn(net_task(&stack)).ok();
+    spawner.spawn(task(&stack, i2c, delay, display)).ok();
 
-    interrupt::enable(Interrupt::I2C_EXT0, interrupt::Priority::Priority1)
-        .expect("Invalid Interrupt Priority Error");
-
-    let executor = EXECUTOR.init(Executor::new());
-    executor.run(|spawner| {
-        spawner.spawn(connection(controller)).ok();
-        spawner.spawn(net_task(&stack)).ok();
-        spawner.spawn(task(&stack, i2c, delay, display)).ok();
-    });
+    loop {}
 }
 
 #[embassy_executor::task]
@@ -246,12 +221,12 @@ async fn connection(mut controller: WifiController<'static>) {
 }
 
 #[embassy_executor::task]
-async fn net_task(stack: &'static Stack<WifiDevice<'static>>) {
+async fn net_task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) {
     stack.run().await
 }
 
 #[embassy_executor::task]
-async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0>, mut delay:Delay, mut display: EmbassyTaskDisplay<'static>) {
+async fn task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>, i2c: I2C<'static, I2C0>, mut delay:Delay, mut display: EmbassyTaskDisplay<'static>) {
 
     let mut rx_buffer = [0; 4096];
     let mut tx_buffer = [0; 4096];
