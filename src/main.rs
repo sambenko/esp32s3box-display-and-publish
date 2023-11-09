@@ -11,9 +11,6 @@ use embedded_graphics::{
 use display_interface_spi::SPIInterfaceNoCS;
 use esp_box_ui::{build_ui, temperature::update_temperature, humidity::update_humidity, pressure::update_pressure};
 
-mod embassy_task_ili9342c;
-use embassy_task_ili9342c::EmbassyTaskDisplay;
-
 // peripherals imports
 use hal::{
     clock::{ClockControl, CpuClock},
@@ -126,18 +123,16 @@ async fn main(spawner: Spawner) -> ! {
     let di = SPIInterfaceNoCS::new(spi, dc);
     delay.delay_ms(500u32);
 
-    let mut display = EmbassyTaskDisplay {
-        inner: match mipidsi::Builder::ili9342c_rgb565(di)
-            .with_display_size(320, 240)
-            .with_orientation(mipidsi::Orientation::PortraitInverted(false))
-            .with_color_order(mipidsi::ColorOrder::Bgr)
-            .init(&mut delay, Some(reset)) {
-            Ok(display) => display,
-            Err(e) => {
-                println!("Display initialization failed: {:?}", e);
-                panic!("Display initialization failed");
-            }
-        },
+    let mut display = match mipidsi::Builder::ili9342c_rgb565(di)
+        .with_display_size(320, 240)
+        .with_orientation(mipidsi::Orientation::PortraitInverted(false))
+        .with_color_order(mipidsi::ColorOrder::Bgr)
+        .init(&mut delay, Some(reset)) {
+        Ok(display) => display,
+        Err(e) => {
+            println!("Display initialization failed: {:?}", e);
+            panic!("Display initialization failed");
+        }
     };
 
     backlight.set_high().unwrap();
@@ -166,68 +161,7 @@ async fn main(spawner: Spawner) -> ! {
     
     spawner.spawn(connection(controller)).ok();
     spawner.spawn(net_task(&stack)).ok();
-    spawner.spawn(task(&stack, i2c, delay, display)).ok();
-
-    loop {}
-}
-
-#[embassy_executor::task]
-async fn connection(mut controller: WifiController<'static>) {
-    println!("start connection task");
-    println!("Device capabilities: {:?}", controller.get_capabilities());
-    loop {
-        match esp_wifi::wifi::get_wifi_state() {
-            WifiState::StaConnected => {
-                // wait until we're no longer connected
-                controller.wait_for_event(WifiEvent::StaDisconnected).await;
-                sleep(5000).await;
-            }
-            _ => {}
-        }
-        if !matches!(controller.is_started(), Ok(true)) {
-            let client_config = Configuration::Client(ClientConfiguration {
-                ssid: SSID.into(),
-                password: PASSWORD.into(),
-                ..Default::default()
-            });
-
-            match controller.set_configuration(&client_config) {
-                Ok(()) => {}
-                Err(e) => {
-                    println!("Failed to connect to wifi: {e:?}");
-                    continue;
-                }
-            }
-            println!("Starting wifi");
-            match controller.start().await {
-                Ok(()) => {}
-                Err(e) => {
-                    println!("Failed to connect to wifi: {e:?}");
-                    continue;
-                }
-            }
-            println!("Wifi started!");
-        }
-        println!("About to connect...");
-
-        match controller.connect().await {
-            Ok(_) => println!("Wifi connected!"),
-            Err(e) => {
-                println!("Failed to connect to wifi: {e:?}");
-                sleep(5000).await;
-            }
-        }
-    }
-}
-
-#[embassy_executor::task]
-async fn net_task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) {
-    stack.run().await
-}
-
-#[embassy_executor::task]
-async fn task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>, i2c: I2C<'static, I2C0>, mut delay:Delay, mut display: EmbassyTaskDisplay<'static>) {
-
+    
     let mut rx_buffer = [0; 4096];
     let mut tx_buffer = [0; 4096];
 
@@ -472,6 +406,60 @@ async fn task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>, i2c: I2
             sleep(3000).await;
         }
     }
+}
+
+#[embassy_executor::task]
+async fn connection(mut controller: WifiController<'static>) {
+    println!("start connection task");
+    println!("Device capabilities: {:?}", controller.get_capabilities());
+    loop {
+        match esp_wifi::wifi::get_wifi_state() {
+            WifiState::StaConnected => {
+                // wait until we're no longer connected
+                controller.wait_for_event(WifiEvent::StaDisconnected).await;
+                sleep(5000).await;
+            }
+            _ => {}
+        }
+        if !matches!(controller.is_started(), Ok(true)) {
+            let client_config = Configuration::Client(ClientConfiguration {
+                ssid: SSID.into(),
+                password: PASSWORD.into(),
+                ..Default::default()
+            });
+
+            match controller.set_configuration(&client_config) {
+                Ok(()) => {}
+                Err(e) => {
+                    println!("Failed to connect to wifi: {e:?}");
+                    continue;
+                }
+            }
+            println!("Starting wifi");
+            match controller.start().await {
+                Ok(()) => {}
+                Err(e) => {
+                    println!("Failed to connect to wifi: {e:?}");
+                    continue;
+                }
+            }
+            println!("Wifi started!");
+        }
+        println!("About to connect...");
+
+        match controller.connect().await {
+            Ok(_) => println!("Wifi connected!"),
+            Err(e) => {
+                println!("Failed to connect to wifi: {e:?}");
+                sleep(5000).await;
+            }
+        }
+    }
+}
+
+#[embassy_executor::task]
+async fn net_task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) {
+    stack.run().await
 }
 
 type MyMqttClient<'a> = rust_mqtt::client::client::MqttClient<'a, esp_mbedtls::asynch::AsyncConnectedSession<'a, embassy_net::tcp::TcpSocket<'a>, 4096>, 5, rust_mqtt::utils::rng_generator::CountingRng>;
