@@ -462,9 +462,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-svc"
-version = "0.26.2"
+version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72eadca5c944d68cef49d9fcba75d89bca6a742aa31ee744382684805c9af6f3"
+checksum = "55feac55fb81e14c747d5475f05ead553855a133a36f979fa4e7883a240ee829"
 dependencies = [
  "atomic-waker",
  "embedded-io",
@@ -637,7 +637,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#69ed0653a5c117d0a1df4bea6ff16f14d483b5c5"
+source = "git+https://github.com/esp-rs/esp-wifi#5a7b8f04dfbcc2da256238b49b19b9bd73105f49"
 dependencies = [
  "atomic-polyfill 1.0.3",
  "atomic_enum",
@@ -671,7 +671,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi-sys"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#69ed0653a5c117d0a1df4bea6ff16f14d483b5c5"
+source = "git+https://github.com/esp-rs/esp-wifi#5a7b8f04dfbcc2da256238b49b19b9bd73105f49"
 dependencies = [
  "anyhow",
 ]
@@ -1105,9 +1105,9 @@ checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
 
 [[package]]
 name = "minijinja"
-version = "1.0.9"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f98b09920c8be9ff96a5625aca5b5db7a4f4ba025132ff7d7aacb72c0244a45"
+checksum = "208758577ef2c86cf5dd3e85730d161413ec3284e2d73b2ef65d9a24d9971bcb"
 dependencies = [
  "serde",
 ]
