@@ -1354,7 +1354,7 @@ dependencies = [
 [[package]]
 name = "rust-mqtt"
 version = "0.1.5"
-source = "git+https://github.com/sambenko/rust-mqtt.git#9c84777bd75fa857966f3b9f28e4086baa3ce6cd"
+source = "git+https://github.com/obabec/rust-mqtt.git#483138c2f9187b1b1e81eea4609b04fd8c37e9c2"
 dependencies = [
  "embedded-io",
  "embedded-io-async",

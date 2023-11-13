@@ -26,7 +26,7 @@ embedded-can       = { version = "0.4.1" }
 
 static_cell = { version = "2.0.0", features = ["nightly"] }
 
-rust-mqtt = { default-features = false, features = ["tls"] }
+rust-mqtt = { git = "https://github.com/obabec/rust-mqtt.git", default-features = false, features = ["tls"]}
 esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git", package = "esp-mbedtls", features = ["esp32s3", "async"]}
 
 bme680 = "0.6.0"
