@@ -154,6 +154,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "bondrewd"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d1660fac8d3acced44dac64453fafedf5aab2de196b932c727e63e4ae42d1cc"
+dependencies = [
+ "bondrewd-derive",
+]
+
+[[package]]
+name = "bondrewd-derive"
+version = "0.3.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "723da0dee1eef38edc021b0793f892bdc024500c6a5b0727a2efe16f0e0a6977"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "byte-slice-cast"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -253,11 +273,10 @@ dependencies = [
 
 [[package]]
 name = "embassy-executor"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f787006731ba148b3f732838c51289fbfb379446521e344d4b925a521692b118"
+checksum = "ac5b3658a8ecdcddf6d3fe0967fe0843d407071e0e32aa77ed03b60c66fbecf2"
 dependencies = [
- "atomic-polyfill 1.0.3",
  "critical-section",
  "embassy-macros",
  "embassy-time",
@@ -265,9 +284,9 @@ dependencies = [
 
 [[package]]
 name = "embassy-futures"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47e5367165d347c039360f784812f493b001583ab6a3dd8622f4ce9c30374ec3"
+checksum = "1f878075b9794c1e4ac788c95b728f26aa6366d32eeb10c7051389f898f7d067"
 
 [[package]]
 name = "embassy-macros"
@@ -637,7 +656,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#5a7b8f04dfbcc2da256238b49b19b9bd73105f49"
+source = "git+https://github.com/esp-rs/esp-wifi#8574d00cab3f88feac9c1afc19932dd02a9d83d6"
 dependencies = [
  "atomic-polyfill 1.0.3",
  "atomic_enum",
@@ -671,7 +690,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi-sys"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#5a7b8f04dfbcc2da256238b49b19b9bd73105f49"
+source = "git+https://github.com/esp-rs/esp-wifi#8574d00cab3f88feac9c1afc19932dd02a9d83d6"
 dependencies = [
  "anyhow",
 ]
@@ -801,6 +820,7 @@ name = "esp32s3box_display_and_publish"
 version = "0.1.0"
 dependencies = [
  "bme680",
+ "critical-section",
  "display-interface",
  "display-interface-spi",
  "embassy-executor",
@@ -825,15 +845,16 @@ dependencies = [
  "nb 1.1.0",
  "rust-mqtt",
  "static_cell",
+ "tt21100-async",
 ]
 
 [[package]]
 name = "esp_box_ui"
 version = "0.1.0"
-source = "git+https://github.com/sambenko/esp-box-ui.git#3ccf8af74f8f3881a244aeb28e8c3b6ff8ded022"
+source = "git+https://github.com/sambenko/esp-box-ui.git?branch=main#4c92e52e77b96680b5d41fd95afb4ce650705a52"
 dependencies = [
  "embedded-graphics",
- "heapless 0.7.16",
+ "heapless 0.8.0",
  "profont",
  "tinybmp",
 ]
@@ -1534,22 +1555,22 @@ dependencies = [
 
 [[package]]
 name = "thiserror-core"
-version = "1.0.38"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d97345f6437bb2004cd58819d8a9ef8e36cdd7661c2abc4bbde0a7c40d9f497"
+checksum = "c001ee18b7e5e3f62cbf58c7fe220119e68d902bb7443179c0c8aef30090e999"
 dependencies = [
  "thiserror-core-impl",
 ]
 
 [[package]]
 name = "thiserror-core-impl"
-version = "1.0.38"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10ac1c5050e43014d16b2f94d0d2ce79e65ffdd8b38d8048f9c8f6a8a6da62ac"
+checksum = "e4c60d69f36615a077cc7663b9cb8e42275722d23e58a7fa3d2c7f2915d09d04"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -1599,6 +1620,15 @@ dependencies = [
  "indexmap",
  "toml_datetime",
  "winnow",
+]
+
+[[package]]
+name = "tt21100-async"
+version = "0.1.0"
+source = "git+https://github.com/jessebraham/tt21100.git?branch=feature/async#a4e02d8c6dd8b04e67f3ebd7836f807af4488c31"
+dependencies = [
+ "bondrewd",
+ "embedded-hal-async",
 ]
 
 [[package]]
