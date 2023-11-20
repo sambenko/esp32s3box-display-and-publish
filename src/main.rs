@@ -3,24 +3,37 @@
 #![feature(type_alias_impl_trait)]
 
 use core::time::Duration as CoreDuration;
+use core::cell::RefCell;
+use critical_section::Mutex;
 
 // display and graphics imports
 use embedded_graphics::{
     pixelcolor::Rgb565, prelude::*,
 };
 use display_interface_spi::SPIInterfaceNoCS;
-use esp_box_ui::{build_ui, temperature::update_temperature, humidity::update_humidity, pressure::update_pressure};
+
+// esp-box UI elements imports
+use esp_box_ui::{
+    sensor_data::{SensorData, SensorType, update_sensor_data},
+    build_sensor_ui,
+    food_item::{ FoodItem, update_field },
+    build_inventory,
+};
 
 // peripherals imports
 use hal::{
     clock::{ClockControl, CpuClock},
     i2c::I2C,
-    spi::{master::Spi, SpiMode},
-    peripherals::{Peripherals, I2C0},
+    spi::{
+        master::Spi, 
+        SpiMode
+    },
+    gpio::{ Event, GpioPin, Input, PullUp },
+    peripherals::{Peripherals, Interrupt, I2C0, I2C1},
     prelude::{_fugit_RateExtU32, *},
     timer::TimerGroup,
     Rng, IO, Delay,
-    embassy,
+    embassy, interrupt
 };
 
 //wifi imports
@@ -62,6 +75,10 @@ const CLIENT_CERT: &'static str = concat!(include_str!("../secrets/VendingMachin
 const PRIVATE_KEY: &'static str = concat!(include_str!("../secrets/VendingMachine-private.pem.key"), "\0");
 const ENDPOINT: &'static str = include_str!("../secrets/endpoint.txt");
 const CLIENT_ID: &'static str = include_str!("../secrets/client_id.txt");
+
+use tt21100_async::TT21100;
+
+static TOUCH_CONTROLLER: Mutex<RefCell<Option<TT21100<I2C<I2C0>, GpioPin<Input<PullUp>, 3>>>>> = Mutex::new(RefCell::new(None));
 
 #[main]
 async fn main(spawner: Spawner) -> ! {
@@ -138,15 +155,78 @@ async fn main(spawner: Spawner) -> ! {
     backlight.set_high().unwrap();
 
     display.clear(Rgb565::WHITE).unwrap();
-    build_ui(&mut display);
 
-    let i2c = I2C::new(
+    let hotdog = FoodItem {
+        name: "Hotdog",
+        pos_y: 17,
+        amount: 0,
+        price: 2.50,
+    };
+
+    let sandwich = FoodItem {
+        name: "Sandwich",
+        pos_y: 87,
+        amount: 0,
+        price: 3.50,
+    };
+    
+    let energy_drink = FoodItem {
+        name: "Energy Drink",
+        pos_y: 157,
+        amount: 0,
+        price: 2.00,
+    };
+
+    build_inventory(
+        &mut display,
+        &hotdog,
+        &sandwich,
+        &energy_drink,
+    );
+
+    update_field(&mut display, &hotdog);
+    update_field(&mut display, &sandwich);
+    update_field(&mut display, &energy_drink);
+
+    let mut temperature_data = SensorData {
+        sensor_type: SensorType::Temperature,
+        pos_x: 35,
+        value: 0.0,
+    };
+    let mut humidity_data = SensorData {
+        sensor_type: SensorType::Humidity,
+        pos_x: 120,
+        value: 0.0,
+    };
+    let mut pressure_data = SensorData {
+        sensor_type: SensorType::Pressure,
+        pos_x: 205,
+        value: 0.0,
+    };
+
+    let i2c0 = I2C::new(
         peripherals.I2C0,
+        io.pins.gpio8,
+        io.pins.gpio18,
+        100u32.kHz(),
+        &clocks,
+    );
+
+    let i2c1 = I2C::new(
+        peripherals.I2C1,
         io.pins.gpio41,
         io.pins.gpio40,
         100u32.kHz(),
         &clocks,
     );
+
+    // let mut irq_pin = io.pins.gpio3.into_pull_up_input();
+    // irq_pin.listen(Event::RisingEdge);
+
+    // let mut touch_controller = TT21100::new(i2c0, irq_pin);
+    // touch_controller.init().await.unwrap();
+
+    // spawner.spawn(touch_controller_task(touch_controller)).ok();
 
     let config = Config::dhcpv4(Default::default());
 
@@ -161,6 +241,7 @@ async fn main(spawner: Spawner) -> ! {
     
     spawner.spawn(connection(controller)).ok();
     spawner.spawn(net_task(&stack)).ok();
+    
     
     let mut rx_buffer = [0; 4096];
     let mut tx_buffer = [0; 4096];
@@ -266,7 +347,7 @@ async fn main(spawner: Spawner) -> ! {
         }
 
         //initialize BME680
-        let mut bme = Bme680::init(i2c, &mut delay, I2CAddress::Primary).expect("Failed to initialize Bme680");
+        let mut bme = Bme680::init(i2c1, &mut delay, I2CAddress::Primary).expect("Failed to initialize Bme680");
         let settings = SettingsBuilder::new()
             .with_humidity_oversampling(OversamplingSetting::OS2x)
             .with_pressure_oversampling(OversamplingSetting::OS4x)
@@ -298,9 +379,20 @@ async fn main(spawner: Spawner) -> ! {
             println!("| Gas Resistance {:.2}Ω ", gas);
             println!("|========================|");
 
-            update_temperature(&mut display, temp);
-            update_humidity(&mut display, hum);
-            update_pressure(&mut display, pres);
+            temperature_data.value = temp;
+            humidity_data.value = hum;
+            pressure_data.value = pres;
+
+            build_sensor_ui(
+                &mut display,
+                &temperature_data, 
+                &humidity_data, 
+                &pressure_data
+            );
+
+            update_sensor_data(&mut display, &temperature_data);
+            update_sensor_data(&mut display, &humidity_data);
+            update_sensor_data(&mut display, &pressure_data);
 
             // Convert data into Strings
             let mut temperature_string: String<32> = String::new();
@@ -459,10 +551,23 @@ async fn connection(mut controller: WifiController<'static>) {
 
 #[embassy_executor::task]
 async fn net_task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) {
-    stack.run().await
+    stack.run().await;
 }
 
-type MyMqttClient<'a> = rust_mqtt::client::client::MqttClient<'a, esp_mbedtls::asynch::AsyncConnectedSession<'a, embassy_net::tcp::TcpSocket<'a>, 4096>, 5, rust_mqtt::utils::rng_generator::CountingRng>;
+#[embassy_executor::task]
+async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>, GpioPin<Input<PullUp>, 3>>) {
+    loop {
+        if let Ok(_) = touch_controller.data_available().await {
+            if let Ok(event) = touch_controller.event().await {
+                if let tt21100_async::Event::Button(button) = event {
+                    println!("Button Event: Report ID: {}", button.report_id);
+                }
+            }
+        }
+        sleep(1000).await;
+    }
+}
+
 
 pub async fn sleep(millis: u32) {
     Timer::after(Duration::from_millis(millis as u64)).await;
