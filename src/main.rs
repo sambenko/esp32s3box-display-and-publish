@@ -31,7 +31,7 @@ use hal::{
         SpiMode
     },
     gpio::{ Event, GpioPin, Input, PullUp },
-    peripherals::{Peripherals, Interrupt, I2C0, I2C1},
+    peripherals::{Peripherals, Interrupt, I2C0},
     prelude::{_fugit_RateExtU32, *},
     timer::TimerGroup,
     Rng, IO, Delay,
@@ -79,8 +79,6 @@ const ENDPOINT: &'static str = include_str!("../secrets/endpoint.txt");
 const CLIENT_ID: &'static str = include_str!("../secrets/client_id.txt");
 
 use tt21100_async::TT21100;
-
-static TOUCH_CONTROLLER: Mutex<RefCell<Option<TT21100<I2C<I2C0>, GpioPin<Input<PullUp>, 3>>>>> = Mutex::new(RefCell::new(None));
 
 static TEMPERATURE_DATA: Mutex<RefCell<SensorData>> = Mutex::new(RefCell::new(SensorData { sensor_type: SensorType::Temperature, pos_x: 35, value: 0.0 }));
 static HUMIDITY_DATA: Mutex<RefCell<SensorData>> = Mutex::new(RefCell::new(SensorData { sensor_type: SensorType::Humidity, pos_x: 120, value: 0.0 }));
@@ -164,18 +162,6 @@ async fn main(spawner: Spawner) -> ! {
         },
     };
 
-    // let mut display = match mipidsi::Builder::ili9342c_rgb565(di)
-    //     .with_display_size(320, 240)
-    //     .with_orientation(mipidsi::Orientation::PortraitInverted(false))
-    //     .with_color_order(mipidsi::ColorOrder::Bgr)
-    //     .init(&mut delay, Some(reset)) {
-    //     Ok(display) => display,
-    //     Err(e) => {
-    //         println!("Display initialization failed: {:?}", e);
-    //         panic!("Display initialization failed");
-    //     }
-    // };
-
     backlight.set_high().unwrap();
 
     display_struct.display.clear(Rgb565::WHITE).unwrap();
@@ -217,7 +203,7 @@ async fn main(spawner: Spawner) -> ! {
     let mut irq_pin = io.pins.gpio3.into_pull_up_input();
     irq_pin.listen(Event::RisingEdge);
 
-    let mut touch_controller = TT21100::new(i2c0, irq_pin);
+    let touch_controller = TT21100::new(i2c0, irq_pin);
 
     spawner.spawn(touch_controller_task(touch_controller, display_struct)).ok();
 
@@ -539,49 +525,89 @@ async fn net_task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) {
     stack.run().await;
 }
 
+const TOUCH_TIMEOUT: u64 = 500;
+
 #[embassy_executor::task]
 async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>, GpioPin<Input<PullUp>, 3>>, mut display_struct: EmbassyTaskDisplay<'static>) {
+    let mut last_touch_time = 0u64;
     let mut is_button_pressed = false;
 
     loop {
         touch_controller.data_available().await.unwrap();
+        let current_time = embassy_time::Instant::now().as_millis();
         if let Ok(event) = touch_controller.event().await {
-            match event {
-                tt21100_async::Event::Button(button) => {
-                    let currently_pressed = button.btn_val != 0;
-                    if currently_pressed && !is_button_pressed {
-                        is_button_pressed = true;
-                        let temperature_data = critical_section::with(|cs| TEMPERATURE_DATA.borrow(cs).borrow().clone());
-                        let humidity_data = critical_section::with(|cs| HUMIDITY_DATA.borrow(cs).borrow().clone());
-                        let pressure_data = critical_section::with(|cs| PRESSURE_DATA.borrow(cs).borrow().clone());
-    
-                        build_sensor_ui(&mut display_struct.display, &temperature_data, &humidity_data, &pressure_data);
-                        update_sensor_data(&mut display_struct.display, &temperature_data);
-                        update_sensor_data(&mut display_struct.display, &humidity_data);
-                        update_sensor_data(&mut display_struct.display, &pressure_data);
+            if current_time - last_touch_time > TOUCH_TIMEOUT {
+                match event {
+                    tt21100_async::Event::Button(button) => {
+                        let currently_pressed = button.btn_val != 0;
+                        if currently_pressed && !is_button_pressed {
+                            is_button_pressed = true;
+                            let temperature_data = critical_section::with(|cs| TEMPERATURE_DATA.borrow(cs).borrow().clone());
+                            let humidity_data = critical_section::with(|cs| HUMIDITY_DATA.borrow(cs).borrow().clone());
+                            let pressure_data = critical_section::with(|cs| PRESSURE_DATA.borrow(cs).borrow().clone());
 
-                    } else if !currently_pressed && is_button_pressed {
-                        is_button_pressed = false;
-                        display_struct.display.clear(Rgb565::WHITE).unwrap();
+                            build_sensor_ui(&mut display_struct.display, &temperature_data, &humidity_data, &pressure_data);
+                            update_sensor_data(&mut display_struct.display, &temperature_data);
+                            update_sensor_data(&mut display_struct.display, &humidity_data);
+                            update_sensor_data(&mut display_struct.display, &pressure_data);
 
-                        let hotdog = critical_section::with(|cs| HOTDOG.borrow(cs).borrow().clone());
-                        let sandwich = critical_section::with(|cs| SANDWICH.borrow(cs).borrow().clone());
-                        let energy_drink = critical_section::with(|cs| ENERGY_DRINK.borrow(cs).borrow().clone());
+                        } else if !currently_pressed && is_button_pressed {
+                            is_button_pressed = false;
+                            display_struct.display.clear(Rgb565::WHITE).unwrap();
 
-                        build_inventory(&mut display_struct.display, &hotdog, &sandwich, &energy_drink);
-                        update_field(&mut display_struct.display, &hotdog);
-                        update_field(&mut display_struct.display, &sandwich);
-                        update_field(&mut display_struct.display, &energy_drink);
-                    }
-                },
-                tt21100_async::Event::Touch { report, touches } => {
-                    if let Some(touch) = touches.0 {
-                        if (touch.x > 240 ) && (touch.y == 0) {
-                            continue;
+                            let hotdog = critical_section::with(|cs| HOTDOG.borrow(cs).borrow().clone());
+                            let sandwich = critical_section::with(|cs| SANDWICH.borrow(cs).borrow().clone());
+                            let energy_drink = critical_section::with(|cs| ENERGY_DRINK.borrow(cs).borrow().clone());
+
+                            build_inventory(&mut display_struct.display, &hotdog, &sandwich, &energy_drink);
+                            update_field(&mut display_struct.display, &hotdog);
+                            update_field(&mut display_struct.display, &sandwich);
+                            update_field(&mut display_struct.display, &energy_drink);
+                        }
+                    },
+                    tt21100_async::Event::Touch { report, touches } => {
+                        if let Some(touch) = touches.0 {
+
+                            let max_x = 320;
+                            let corrected_x = max_x - touch.x;
+
+                            if corrected_x > 240 && corrected_x < 300 {
+                                // touch y > 17 + 10 < 45 for hotdog
+                                if touch.y > 27 && touch.y < 45 {
+                                    critical_section::with(|cs| {
+                                        let mut hotdog = HOTDOG.borrow(cs).borrow_mut();
+                                        if hotdog.amount > 0 {
+                                            hotdog.amount -= 1;
+                                            println!("Hotdog bought!");
+                                            update_field(&mut display_struct.display, &*hotdog);
+                                        }
+                                    });
+                                // touch y > 87 + 10 < 105 for sandwich
+                                } else if touch.y > 97 && touch.y < 115 {
+                                    critical_section::with(|cs| {
+                                        let mut sandwich = SANDWICH.borrow(cs).borrow_mut();
+                                        if sandwich.amount > 0 {
+                                            sandwich.amount -= 1;
+                                            println!("Sandwich bought!");
+                                            update_field(&mut display_struct.display, &*sandwich);
+                                        }
+                                    });
+                                // touch y > 157 + 10 < 185 for energy drink  
+                                } else if touch.y > 167 && touch.y < 185 {
+                                    critical_section::with(|cs| {
+                                        let mut energy_drink = ENERGY_DRINK.borrow(cs).borrow_mut();
+                                        if energy_drink.amount > 0 {
+                                            energy_drink.amount -= 1;
+                                            println!("Energy drink bought!");
+                                            update_field(&mut display_struct.display, &*energy_drink);
+                                        }
+                                    });
+                                }
+                            }
                         }
                     }
-                    println!("To implement");
                 }
+                last_touch_time = current_time;
             }
         }
 
