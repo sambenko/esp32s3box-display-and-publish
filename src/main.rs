@@ -24,14 +24,14 @@ use esp_box_ui::{
 
 // peripherals imports
 use hal::{
-    clock::{ClockControl, CpuClock},
+    clock::{ClockControl, CpuClock, Clocks},
     i2c::I2C,
     spi::{
         master::Spi, 
         SpiMode
     },
     gpio::{ Event, GpioPin, Input, PullUp },
-    peripherals::{Peripherals, Interrupt, I2C0},
+    peripherals::{Peripherals, Interrupt, I2C0, I2C1},
     prelude::{_fugit_RateExtU32, *},
     timer::TimerGroup,
     Rng, IO, Delay,
@@ -58,7 +58,7 @@ use rust_mqtt::{
 };
 
 // tls imports
-use esp_mbedtls::{asynch::Session, set_debug, Mode, TlsVersion};
+use esp_mbedtls::{asynch::{Session, AsyncConnectedSession}, set_debug, Mode, TlsVersion};
 use esp_mbedtls::{Certificates, X509};
 
 use bme680::*;
@@ -525,12 +525,12 @@ async fn net_task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) {
     stack.run().await;
 }
 
-const TOUCH_TIMEOUT: u64 = 500;
+const TOUCH_TIMEOUT: u64 = 1000;
 
 #[embassy_executor::task]
 async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>, GpioPin<Input<PullUp>, 3>>, mut display_struct: EmbassyTaskDisplay<'static>) {
     let mut last_touch_time = 0u64;
-    let mut is_button_pressed = false;
+    let mut is_sensor_data_displayed = false;
 
     loop {
         touch_controller.data_available().await.unwrap();
@@ -540,29 +540,32 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
                 match event {
                     tt21100_async::Event::Button(button) => {
                         let currently_pressed = button.btn_val != 0;
-                        if currently_pressed && !is_button_pressed {
-                            is_button_pressed = true;
-                            let temperature_data = critical_section::with(|cs| TEMPERATURE_DATA.borrow(cs).borrow().clone());
-                            let humidity_data = critical_section::with(|cs| HUMIDITY_DATA.borrow(cs).borrow().clone());
-                            let pressure_data = critical_section::with(|cs| PRESSURE_DATA.borrow(cs).borrow().clone());
+                        if currently_pressed {
+                            is_sensor_data_displayed = !is_sensor_data_displayed;
+                            
+                            if is_sensor_data_displayed {
+                                // Show sensor data UI
+                                let temperature_data = critical_section::with(|cs| TEMPERATURE_DATA.borrow(cs).borrow().clone());
+                                let humidity_data = critical_section::with(|cs| HUMIDITY_DATA.borrow(cs).borrow().clone());
+                                let pressure_data = critical_section::with(|cs| PRESSURE_DATA.borrow(cs).borrow().clone());
 
-                            build_sensor_ui(&mut display_struct.display, &temperature_data, &humidity_data, &pressure_data);
-                            update_sensor_data(&mut display_struct.display, &temperature_data);
-                            update_sensor_data(&mut display_struct.display, &humidity_data);
-                            update_sensor_data(&mut display_struct.display, &pressure_data);
+                                build_sensor_ui(&mut display_struct.display, &temperature_data, &humidity_data, &pressure_data);
+                                update_sensor_data(&mut display_struct.display, &temperature_data);
+                                update_sensor_data(&mut display_struct.display, &humidity_data);
+                                update_sensor_data(&mut display_struct.display, &pressure_data);
+                            } else {
+                                // Hide sensor data UI and show inventory
+                                display_struct.display.clear(Rgb565::WHITE).unwrap();
 
-                        } else if !currently_pressed && is_button_pressed {
-                            is_button_pressed = false;
-                            display_struct.display.clear(Rgb565::WHITE).unwrap();
+                                let hotdog = critical_section::with(|cs| HOTDOG.borrow(cs).borrow().clone());
+                                let sandwich = critical_section::with(|cs| SANDWICH.borrow(cs).borrow().clone());
+                                let energy_drink = critical_section::with(|cs| ENERGY_DRINK.borrow(cs).borrow().clone());
 
-                            let hotdog = critical_section::with(|cs| HOTDOG.borrow(cs).borrow().clone());
-                            let sandwich = critical_section::with(|cs| SANDWICH.borrow(cs).borrow().clone());
-                            let energy_drink = critical_section::with(|cs| ENERGY_DRINK.borrow(cs).borrow().clone());
-
-                            build_inventory(&mut display_struct.display, &hotdog, &sandwich, &energy_drink);
-                            update_field(&mut display_struct.display, &hotdog);
-                            update_field(&mut display_struct.display, &sandwich);
-                            update_field(&mut display_struct.display, &energy_drink);
+                                build_inventory(&mut display_struct.display, &hotdog, &sandwich, &energy_drink);
+                                update_field(&mut display_struct.display, &hotdog);
+                                update_field(&mut display_struct.display, &sandwich);
+                                update_field(&mut display_struct.display, &energy_drink);
+                            }
                         }
                     },
                     tt21100_async::Event::Touch { report, touches } => {
@@ -571,9 +574,9 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
                             let max_x = 320;
                             let corrected_x = max_x - touch.x;
 
-                            if corrected_x > 240 && corrected_x < 300 {
+                            if corrected_x > 230 && corrected_x < 310 {
                                 // touch y > 17 + 10 < 45 for hotdog
-                                if touch.y > 27 && touch.y < 45 {
+                                if touch.y > 17 && touch.y < 55 {
                                     critical_section::with(|cs| {
                                         let mut hotdog = HOTDOG.borrow(cs).borrow_mut();
                                         if hotdog.amount > 0 {
@@ -583,7 +586,7 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
                                         }
                                     });
                                 // touch y > 87 + 10 < 105 for sandwich
-                                } else if touch.y > 97 && touch.y < 115 {
+                                } else if touch.y > 87 && touch.y < 125 {
                                     critical_section::with(|cs| {
                                         let mut sandwich = SANDWICH.borrow(cs).borrow_mut();
                                         if sandwich.amount > 0 {
@@ -593,7 +596,7 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
                                         }
                                     });
                                 // touch y > 157 + 10 < 185 for energy drink  
-                                } else if touch.y > 167 && touch.y < 185 {
+                                } else if touch.y > 167 && touch.y < 205 {
                                     critical_section::with(|cs| {
                                         let mut energy_drink = ENERGY_DRINK.borrow(cs).borrow_mut();
                                         if energy_drink.amount > 0 {
@@ -615,9 +618,62 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
     }
 }
 
-
-
-
 pub async fn sleep(millis: u32) {
     Timer::after(Duration::from_millis(millis as u64)).await;
+}
+
+const MEASUREMENT_INTERVAL: u32 = 59_000; // 59 seconds in milliseconds
+
+#[embassy_executor::task]
+async fn sensor_data_task(mut bme: Bme680<I2C<'static, I2C1>, Delay>, mut client: MqttClient<'static, AsyncConnectedSession<'static, TcpSocket<'static>, 4096>, 5, CountingRng>, clocks: Clocks<'static>) {
+    loop {
+        bme.set_sensor_mode(&mut Delay::new(&clocks), PowerMode::ForcedMode).expect("Failed to set sensor mode");
+
+        let settings = SettingsBuilder::new() // Use the same settings as before
+            // ... rest of settings
+            .build();
+        
+        let profile_duration = bme.get_profile_dur(&settings.0).expect("Failed to get profile duration");
+        let duration_ms = profile_duration.as_millis() as u32;
+        Delay::new(&clocks).delay_ms(duration_ms);
+
+        let (data, _state) = bme.get_sensor_data(&mut Delay::new(&clocks)).expect("Failed to get sensor data");
+
+        // Temperature, humidity, pressure, and gas measurements
+        let temp = data.temperature_celsius();
+        let hum = data.humidity_percent();
+        let pres = data.pressure_hpa();
+
+        // Update the global data for display (if needed)
+        critical_section::with(|cs| {
+            TEMPERATURE_DATA.borrow(cs).borrow_mut().value = temp;
+            HUMIDITY_DATA.borrow(cs).borrow_mut().value = hum;
+            PRESSURE_DATA.borrow(cs).borrow_mut().value = pres;
+        });
+
+        // Send MQTT messages
+        publish_mqtt(&mut client, "Temperature", temp).await;
+        publish_mqtt(&mut client, "Humidity", hum).await;
+        publish_mqtt(&mut client, "Pressure", pres).await;
+
+        // Sleep until the next measurement
+        sleep(MEASUREMENT_INTERVAL).await;
+    }
+}
+
+async fn publish_mqtt(client: &mut MqttClient<'_, AsyncConnectedSession<'_, TcpSocket<'_>, 4096>, 5, CountingRng>, topic: &str, value: f32) {
+    let mut data_string: String<32> = String::new();
+    write!(data_string, "{:.2}", value).unwrap();
+
+    match client.send_message(
+        topic,
+        data_string.as_bytes(),
+        rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
+        true,
+    ).await {
+        Ok(()) => {}
+        Err(mqtt_error) => {
+            println!("MQTT Error: {:?}", mqtt_error);
+        }
+    }
 }
