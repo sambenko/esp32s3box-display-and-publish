@@ -479,7 +479,7 @@ async fn main(spawner: Spawner) -> ! {
                 },
             }
 
-            sleep(3000).await;
+            sleep(60000).await;
         }
     }
 }
@@ -573,7 +573,12 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
                         update_field(&mut display_struct.display, &energy_drink);
                     }
                 },
-                _ => {
+                tt21100_async::Event::Touch { report, touches } => {
+                    if let Some(touch) = touches.0 {
+                        if (touch.x == 0) && (touch.y == 0) {
+                            continue;
+                        }
+                    }
                     println!("To implement");
                 }
             }
