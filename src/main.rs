@@ -11,6 +11,8 @@ use embedded_graphics::{
     pixelcolor::Rgb565, prelude::*,
 };
 use display_interface_spi::SPIInterfaceNoCS;
+mod embassy_task_ili9342c;
+use embassy_task_ili9342c::EmbassyTaskDisplay;
 
 // esp-box UI elements imports
 use esp_box_ui::{
@@ -80,6 +82,14 @@ use tt21100_async::TT21100;
 
 static TOUCH_CONTROLLER: Mutex<RefCell<Option<TT21100<I2C<I2C0>, GpioPin<Input<PullUp>, 3>>>>> = Mutex::new(RefCell::new(None));
 
+static TEMPERATURE_DATA: Mutex<RefCell<SensorData>> = Mutex::new(RefCell::new(SensorData { sensor_type: SensorType::Temperature, pos_x: 35, value: 0.0 }));
+static HUMIDITY_DATA: Mutex<RefCell<SensorData>> = Mutex::new(RefCell::new(SensorData { sensor_type: SensorType::Humidity, pos_x: 120, value: 0.0 }));
+static PRESSURE_DATA: Mutex<RefCell<SensorData>> = Mutex::new(RefCell::new(SensorData {sensor_type: SensorType::Pressure, pos_x: 205, value: 0.0 }));
+
+static HOTDOG: Mutex<RefCell<FoodItem>> = Mutex::new(RefCell::new(FoodItem { name: "Hotdog", pos_y: 17, amount: 10, price: 2.50 }));
+static SANDWICH: Mutex<RefCell<FoodItem>> = Mutex::new(RefCell::new(FoodItem { name: "Sandwich", pos_y: 87, amount: 9, price: 3.50 }));
+static ENERGY_DRINK: Mutex<RefCell<FoodItem>> = Mutex::new(RefCell::new(FoodItem { name: "Energy Drink", pos_y: 157, amount: 11, price: 2.00 }));
+
 #[main]
 async fn main(spawner: Spawner) -> ! {
     let peripherals = Peripherals::take();
@@ -140,69 +150,50 @@ async fn main(spawner: Spawner) -> ! {
     let di = SPIInterfaceNoCS::new(spi, dc);
     delay.delay_ms(500u32);
 
-    let mut display = match mipidsi::Builder::ili9342c_rgb565(di)
-        .with_display_size(320, 240)
-        .with_orientation(mipidsi::Orientation::PortraitInverted(false))
-        .with_color_order(mipidsi::ColorOrder::Bgr)
-        .init(&mut delay, Some(reset)) {
-        Ok(display) => display,
-        Err(e) => {
-            println!("Display initialization failed: {:?}", e);
-            panic!("Display initialization failed");
-        }
+    let mut display_struct = EmbassyTaskDisplay {
+        display: match mipidsi::Builder::ili9342c_rgb565(di)
+            .with_display_size(320, 240)
+            .with_orientation(mipidsi::Orientation::PortraitInverted(false))
+            .with_color_order(mipidsi::ColorOrder::Bgr)
+            .init(&mut delay, Some(reset)) {
+            Ok(display) => display,
+            Err(e) => {
+                println!("Display initialization failed: {:?}", e);
+                panic!("Display initialization failed");
+            }
+        },
     };
+
+    // let mut display = match mipidsi::Builder::ili9342c_rgb565(di)
+    //     .with_display_size(320, 240)
+    //     .with_orientation(mipidsi::Orientation::PortraitInverted(false))
+    //     .with_color_order(mipidsi::ColorOrder::Bgr)
+    //     .init(&mut delay, Some(reset)) {
+    //     Ok(display) => display,
+    //     Err(e) => {
+    //         println!("Display initialization failed: {:?}", e);
+    //         panic!("Display initialization failed");
+    //     }
+    // };
 
     backlight.set_high().unwrap();
 
-    display.clear(Rgb565::WHITE).unwrap();
+    display_struct.display.clear(Rgb565::WHITE).unwrap();
 
-    let hotdog = FoodItem {
-        name: "Hotdog",
-        pos_y: 17,
-        amount: 0,
-        price: 2.50,
-    };
-
-    let sandwich = FoodItem {
-        name: "Sandwich",
-        pos_y: 87,
-        amount: 0,
-        price: 3.50,
-    };
-    
-    let energy_drink = FoodItem {
-        name: "Energy Drink",
-        pos_y: 157,
-        amount: 0,
-        price: 2.00,
-    };
+    let hotdog = critical_section::with(|cs| HOTDOG.borrow(cs).borrow().clone());
+    let sandwich = critical_section::with(|cs| SANDWICH.borrow(cs).borrow().clone());
+    let energy_drink = critical_section::with(|cs| ENERGY_DRINK.borrow(cs).borrow().clone());
 
     build_inventory(
-        &mut display,
+        &mut display_struct.display,
         &hotdog,
         &sandwich,
         &energy_drink,
     );
 
-    update_field(&mut display, &hotdog);
-    update_field(&mut display, &sandwich);
-    update_field(&mut display, &energy_drink);
-
-    let mut temperature_data = SensorData {
-        sensor_type: SensorType::Temperature,
-        pos_x: 35,
-        value: 0.0,
-    };
-    let mut humidity_data = SensorData {
-        sensor_type: SensorType::Humidity,
-        pos_x: 120,
-        value: 0.0,
-    };
-    let mut pressure_data = SensorData {
-        sensor_type: SensorType::Pressure,
-        pos_x: 205,
-        value: 0.0,
-    };
+    update_field(&mut display_struct.display, &hotdog);
+    update_field(&mut display_struct.display, &sandwich);
+    update_field(&mut display_struct.display, &energy_drink);
 
     let i2c0 = I2C::new(
         peripherals.I2C0,
@@ -220,13 +211,15 @@ async fn main(spawner: Spawner) -> ! {
         &clocks,
     );
 
-    // let mut irq_pin = io.pins.gpio3.into_pull_up_input();
-    // irq_pin.listen(Event::RisingEdge);
+    interrupt::enable(Interrupt::I2C_EXT0, interrupt::Priority::Priority1).unwrap();
+    interrupt::enable(Interrupt::GPIO, interrupt::Priority::Priority1).unwrap();
 
-    // let mut touch_controller = TT21100::new(i2c0, irq_pin);
-    // touch_controller.init().await.unwrap();
+    let mut irq_pin = io.pins.gpio3.into_pull_up_input();
+    irq_pin.listen(Event::RisingEdge);
 
-    // spawner.spawn(touch_controller_task(touch_controller)).ok();
+    let mut touch_controller = TT21100::new(i2c0, irq_pin);
+
+    spawner.spawn(touch_controller_task(touch_controller, display_struct)).ok();
 
     let config = Config::dhcpv4(Default::default());
 
@@ -372,27 +365,18 @@ async fn main(spawner: Spawner) -> ! {
             let pres = data.pressure_hpa();
             let gas = data.gas_resistance_ohm();
 
+            critical_section::with(|cs| {
+                TEMPERATURE_DATA.borrow(cs).borrow_mut().value = temp;
+                HUMIDITY_DATA.borrow(cs).borrow_mut().value = hum;
+                PRESSURE_DATA.borrow(cs).borrow_mut().value = pres;
+            });
+
             println!("|========================|");
             println!("| Temperature {:.2}°C    |", temp);
             println!("| Humidity {:.2}%        |", hum);
             println!("| Pressure {:.2}hPa     |", pres);
             println!("| Gas Resistance {:.2}Ω ", gas);
             println!("|========================|");
-
-            temperature_data.value = temp;
-            humidity_data.value = hum;
-            pressure_data.value = pres;
-
-            build_sensor_ui(
-                &mut display,
-                &temperature_data, 
-                &humidity_data, 
-                &pressure_data
-            );
-
-            update_sensor_data(&mut display, &temperature_data);
-            update_sensor_data(&mut display, &humidity_data);
-            update_sensor_data(&mut display, &pressure_data);
 
             // Convert data into Strings
             let mut temperature_string: String<32> = String::new();
@@ -555,18 +539,51 @@ async fn net_task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) {
 }
 
 #[embassy_executor::task]
-async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>, GpioPin<Input<PullUp>, 3>>) {
+async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>, GpioPin<Input<PullUp>, 3>>, mut display_struct: EmbassyTaskDisplay<'static>) {
+    let mut is_button_pressed = false;
+
     loop {
-        if let Ok(_) = touch_controller.data_available().await {
-            if let Ok(event) = touch_controller.event().await {
-                if let tt21100_async::Event::Button(button) = event {
-                    println!("Button Event: Report ID: {}", button.report_id);
+        touch_controller.data_available().await.unwrap();
+        if let Ok(event) = touch_controller.event().await {
+            match event {
+                tt21100_async::Event::Button(button) => {
+                    let currently_pressed = button.btn_val != 0;
+                    if currently_pressed && !is_button_pressed {
+                        is_button_pressed = true;
+                        let temperature_data = critical_section::with(|cs| TEMPERATURE_DATA.borrow(cs).borrow().clone());
+                        let humidity_data = critical_section::with(|cs| HUMIDITY_DATA.borrow(cs).borrow().clone());
+                        let pressure_data = critical_section::with(|cs| PRESSURE_DATA.borrow(cs).borrow().clone());
+    
+                        build_sensor_ui(&mut display_struct.display, &temperature_data, &humidity_data, &pressure_data);
+                        update_sensor_data(&mut display_struct.display, &temperature_data);
+                        update_sensor_data(&mut display_struct.display, &humidity_data);
+                        update_sensor_data(&mut display_struct.display, &pressure_data);
+
+                    } else if !currently_pressed && is_button_pressed {
+                        is_button_pressed = false;
+                        display_struct.display.clear(Rgb565::WHITE).unwrap();
+
+                        let hotdog = critical_section::with(|cs| HOTDOG.borrow(cs).borrow().clone());
+                        let sandwich = critical_section::with(|cs| SANDWICH.borrow(cs).borrow().clone());
+                        let energy_drink = critical_section::with(|cs| ENERGY_DRINK.borrow(cs).borrow().clone());
+
+                        build_inventory(&mut display_struct.display, &hotdog, &sandwich, &energy_drink);
+                        update_field(&mut display_struct.display, &hotdog);
+                        update_field(&mut display_struct.display, &sandwich);
+                        update_field(&mut display_struct.display, &energy_drink);
+                    }
+                },
+                _ => {
+                    println!("To implement");
                 }
             }
         }
-        sleep(1000).await;
+
+        sleep(100).await;
     }
 }
+
+
 
 
 pub async fn sleep(millis: u32) {
