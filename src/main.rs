@@ -261,7 +261,7 @@ async fn main(spawner: Spawner) -> ! {
 
         let mut socket = TcpSocket::new(&stack, &mut rx_buffer, &mut tx_buffer);
 
-        socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
+        socket.set_timeout(Some(embassy_time::Duration::from_secs(31)));
 
         let address = match stack
             .dns_query(ENDPOINT, DnsQueryType::A)
@@ -319,6 +319,7 @@ async fn main(spawner: Spawner) -> ! {
         config.add_max_subscribe_qos(rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1);
         config.add_client_id(CLIENT_ID);
         config.max_packet_size = 149504;
+        println!("{:?}", config.keep_alive);
         let mut recv_buffer = [0; 4096];
         let mut write_buffer = [0; 4096];
 
@@ -479,7 +480,7 @@ async fn main(spawner: Spawner) -> ! {
                 },
             }
 
-            sleep(60000).await;
+            sleep(30000).await;
         }
     }
 }
@@ -575,7 +576,7 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
                 },
                 tt21100_async::Event::Touch { report, touches } => {
                     if let Some(touch) = touches.0 {
-                        if (touch.x == 0) && (touch.y == 0) {
+                        if (touch.x > 240 ) && (touch.y == 0) {
                             continue;
                         }
                     }
