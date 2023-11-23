@@ -89,7 +89,7 @@ static SANDWICH: Mutex<RefCell<FoodItem>> = Mutex::new(RefCell::new(FoodItem { n
 static ENERGY_DRINK: Mutex<RefCell<FoodItem>> = Mutex::new(RefCell::new(FoodItem { name: "Energy Drink", pos_y: 157, amount: 11, price: 2.00 }));
 
 #[main]
-async fn main(spawner: Spawner) -> ! {
+async fn main(spawner: Spawner) {
     let peripherals = Peripherals::take();
 
     let system = peripherals.SYSTEM.split();
