@@ -851,7 +851,7 @@ dependencies = [
 [[package]]
 name = "esp_box_ui"
 version = "0.1.0"
-source = "git+https://github.com/sambenko/esp-box-ui.git?branch=main#dac90b766188930ccafad6802b50d050650eec93"
+source = "git+https://github.com/sambenko/esp-box-ui.git?branch=main#5a0eb9fdab9b296dbc3fcaa863cb12df9a84ff9f"
 dependencies = [
  "embedded-graphics",
  "heapless 0.8.0",
