@@ -655,8 +655,8 @@ dependencies = [
 
 [[package]]
 name = "esp-wifi"
-version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#8574d00cab3f88feac9c1afc19932dd02a9d83d6"
+version = "0.1.1"
+source = "git+https://github.com/esp-rs/esp-wifi#0c141a915dcb34f63fcc62211f3da95a8c17200d"
 dependencies = [
  "atomic-polyfill 1.0.3",
  "atomic_enum",
@@ -690,7 +690,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi-sys"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#8574d00cab3f88feac9c1afc19932dd02a9d83d6"
+source = "git+https://github.com/esp-rs/esp-wifi#0c141a915dcb34f63fcc62211f3da95a8c17200d"
 dependencies = [
  "anyhow",
 ]
@@ -851,7 +851,7 @@ dependencies = [
 [[package]]
 name = "esp_box_ui"
 version = "0.1.0"
-source = "git+https://github.com/sambenko/esp-box-ui.git?branch=main#722fdf01ed0d164c2373a315ce7f7bccdd9908e6"
+source = "git+https://github.com/sambenko/esp-box-ui.git?branch=main#dac90b766188930ccafad6802b50d050650eec93"
 dependencies = [
  "embedded-graphics",
  "heapless 0.8.0",
@@ -1020,9 +1020,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.14.2"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f93e7192158dbcda357bdec5fb5788eebf8bbac027f3f33e719d29135ae84156"
+checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 
 [[package]]
 name = "heapless"
@@ -1278,9 +1278,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.69"
+version = "1.0.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "134c189feb4956b20f6f547d2cf727d4c0fe06722b20a0eec87ed445a97f92da"
+checksum = "39278fbbf5fb4f646ce651690877f89d1c5811a3d4acb27700c1cb3cdb78fd3b"
 dependencies = [
  "unicode-ident",
 ]
