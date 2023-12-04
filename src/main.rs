@@ -24,14 +24,14 @@ use esp_box_ui::{
 
 // peripherals imports
 use hal::{
-    clock::{ClockControl, CpuClock, Clocks},
+    clock::{ClockControl, CpuClock },
     i2c::I2C,
     spi::{
         master::Spi, 
         SpiMode
     },
     gpio::{ Event, GpioPin, Input, PullUp },
-    peripherals::{Peripherals, Interrupt, I2C0, I2C1},
+    peripherals::{Peripherals, Interrupt, I2C0},
     prelude::{_fugit_RateExtU32, *},
     timer::TimerGroup,
     Rng, IO, Delay,
@@ -58,7 +58,7 @@ use rust_mqtt::{
 };
 
 // tls imports
-use esp_mbedtls::{asynch::{Session, AsyncConnectedSession}, set_debug, Mode, TlsVersion};
+use esp_mbedtls::{asynch::Session, set_debug, Mode, TlsVersion};
 use esp_mbedtls::{Certificates, X509};
 
 use bme680::*;
@@ -247,7 +247,7 @@ async fn main(spawner: Spawner) {
 
         let mut socket = TcpSocket::new(&stack, &mut rx_buffer, &mut tx_buffer);
 
-        socket.set_timeout(Some(embassy_time::Duration::from_secs(31)));
+        socket.set_timeout(Some(embassy_time::Duration::from_secs(60)));
 
         let address = match stack
             .dns_query(ENDPOINT, DnsQueryType::A)
@@ -545,7 +545,7 @@ async fn main(spawner: Spawner) {
                 },
             }
 
-            sleep(30000).await;
+            sleep(59000).await;
         }
     }
 }
@@ -647,7 +647,7 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
                             }
                         }
                     },
-                    tt21100_async::Event::Touch { report, touches } => {
+                    tt21100_async::Event::Touch { report: _, touches } => {
                         if let Some(touch) = touches.0 {
 
                             let max_x = 320;
