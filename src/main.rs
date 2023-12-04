@@ -358,6 +358,10 @@ async fn main(spawner: Spawner) {
                 PRESSURE_DATA.borrow(cs).borrow_mut().value = pres;
             });
 
+            let hotdog_amount = critical_section::with(|cs| HOTDOG.borrow(cs).borrow().amount);
+            let sandwich_amount = critical_section::with(|cs| SANDWICH.borrow(cs).borrow().amount);
+            let energy_drink_amount = critical_section::with(|cs| ENERGY_DRINK.borrow(cs).borrow().amount);
+
             println!("|========================|");
             println!("| Temperature {:.2}°C    |", temp);
             println!("| Humidity {:.2}%        |", hum);
@@ -378,9 +382,18 @@ async fn main(spawner: Spawner) {
             let mut gas_string: String<32> = String::new();
             write!(gas_string, "{:.2}", gas).expect("write! failed!");
 
+            let mut hotdog_string: String<32> = String::new();
+            write!(hotdog_string, "{}", hotdog_amount).expect("write! failed!");
+
+            let mut sandwich_string: String<32> = String::new();
+            write!(sandwich_string, "{}", sandwich_amount).expect("write! failed!");
+
+            let mut energy_drink_string: String<32> = String::new();
+            write!(energy_drink_string, "{}", energy_drink_amount).expect("write! failed!");
+
             match client
                 .send_message(
-                    "Temperature",
+                    "espbox/sensor/Temperature",
                     temperature_string.as_bytes(),
                     rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
                     true,
@@ -402,7 +415,7 @@ async fn main(spawner: Spawner) {
 
             match client
                 .send_message(
-                    "Pressure",
+                    "espbox/sensor/Pressure",
                     pressure_string.as_bytes(),
                     rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
                     true,
@@ -424,7 +437,7 @@ async fn main(spawner: Spawner) {
 
             match client
                 .send_message(
-                    "Humidity",
+                    "espbox/sensor/Humidity",
                     humidity_string.as_bytes(),
                     rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
                     true,
@@ -446,8 +459,74 @@ async fn main(spawner: Spawner) {
 
             match client
                 .send_message(
-                    "Gas",
+                    "espbox/sensor/Gas",
                     gas_string.as_bytes(),
+                    rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
+                    true,
+                )
+                .await
+            {
+                Ok(()) => {}
+                Err(mqtt_error) => match mqtt_error {
+                    ReasonCode::NetworkError => {
+                        println!("MQTT Network Error");
+                        continue;
+                    }
+                    _ => {
+                        println!("Other MQTT Error: {:?}", mqtt_error);
+                        continue;
+                    }
+                },
+            }
+
+            match client
+                .send_message(
+                    "espbox/inventory/Hotdog",
+                    hotdog_string.as_bytes(),
+                    rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
+                    true,
+                )
+                .await
+            {
+                Ok(()) => {}
+                Err(mqtt_error) => match mqtt_error {
+                    ReasonCode::NetworkError => {
+                        println!("MQTT Network Error");
+                        continue;
+                    }
+                    _ => {
+                        println!("Other MQTT Error: {:?}", mqtt_error);
+                        continue;
+                    }
+                },
+            }
+
+            match client
+                .send_message(
+                    "espbox/inventory/Sandwich",
+                    sandwich_string.as_bytes(),
+                    rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
+                    true,
+                )
+                .await
+            {
+                Ok(()) => {}
+                Err(mqtt_error) => match mqtt_error {
+                    ReasonCode::NetworkError => {
+                        println!("MQTT Network Error");
+                        continue;
+                    }
+                    _ => {
+                        println!("Other MQTT Error: {:?}", mqtt_error);
+                        continue;
+                    }
+                },
+            }
+
+            match client
+                .send_message(
+                    "espbox/inventory/EnergyDrink",
+                    energy_drink_string.as_bytes(),
                     rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
                     true,
                 )
@@ -620,60 +699,4 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
 
 pub async fn sleep(millis: u32) {
     Timer::after(Duration::from_millis(millis as u64)).await;
-}
-
-const MEASUREMENT_INTERVAL: u32 = 59_000; // 59 seconds in milliseconds
-
-#[embassy_executor::task]
-async fn sensor_data_task(mut bme: Bme680<I2C<'static, I2C1>, Delay>, mut client: MqttClient<'static, AsyncConnectedSession<'static, TcpSocket<'static>, 4096>, 5, CountingRng>, clocks: Clocks<'static>) {
-    loop {
-        bme.set_sensor_mode(&mut Delay::new(&clocks), PowerMode::ForcedMode).expect("Failed to set sensor mode");
-
-        let settings = SettingsBuilder::new() // Use the same settings as before
-            // ... rest of settings
-            .build();
-        
-        let profile_duration = bme.get_profile_dur(&settings.0).expect("Failed to get profile duration");
-        let duration_ms = profile_duration.as_millis() as u32;
-        Delay::new(&clocks).delay_ms(duration_ms);
-
-        let (data, _state) = bme.get_sensor_data(&mut Delay::new(&clocks)).expect("Failed to get sensor data");
-
-        // Temperature, humidity, pressure, and gas measurements
-        let temp = data.temperature_celsius();
-        let hum = data.humidity_percent();
-        let pres = data.pressure_hpa();
-
-        // Update the global data for display (if needed)
-        critical_section::with(|cs| {
-            TEMPERATURE_DATA.borrow(cs).borrow_mut().value = temp;
-            HUMIDITY_DATA.borrow(cs).borrow_mut().value = hum;
-            PRESSURE_DATA.borrow(cs).borrow_mut().value = pres;
-        });
-
-        // Send MQTT messages
-        publish_mqtt(&mut client, "Temperature", temp).await;
-        publish_mqtt(&mut client, "Humidity", hum).await;
-        publish_mqtt(&mut client, "Pressure", pres).await;
-
-        // Sleep until the next measurement
-        sleep(MEASUREMENT_INTERVAL).await;
-    }
-}
-
-async fn publish_mqtt(client: &mut MqttClient<'_, AsyncConnectedSession<'_, TcpSocket<'_>, 4096>, 5, CountingRng>, topic: &str, value: f32) {
-    let mut data_string: String<32> = String::new();
-    write!(data_string, "{:.2}", value).unwrap();
-
-    match client.send_message(
-        topic,
-        data_string.as_bytes(),
-        rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
-        true,
-    ).await {
-        Ok(()) => {}
-        Err(mqtt_error) => {
-            println!("MQTT Error: {:?}", mqtt_error);
-        }
-    }
 }
