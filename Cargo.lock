@@ -46,15 +46,6 @@ dependencies = [
 
 [[package]]
 name = "atomic-polyfill"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3ff7eb3f316534d83a8a2c3d1674ace8a5a71198eba31e2e2b597833f699b28"
-dependencies = [
- "critical-section",
-]
-
-[[package]]
-name = "atomic-polyfill"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8cf2bce30dfe09ef0bfaef228b9d414faaf7e563035494d7fe092dba54b300f4"
@@ -70,7 +61,7 @@ checksum = "58c5fc22e05ec2884db458bf307dc7b278c9428888d2b6e6fad9c0ae7804f5f6"
 dependencies = [
  "as-slice 0.1.5",
  "as-slice 0.2.1",
- "atomic-polyfill 1.0.3",
+ "atomic-polyfill",
  "stable_deref_trait",
 ]
 
@@ -315,7 +306,7 @@ dependencies = [
  "embedded-nal-async",
  "futures",
  "generic-array 0.14.7",
- "heapless 0.7.16",
+ "heapless 0.7.17",
  "managed",
  "smoltcp",
  "stable_deref_trait",
@@ -336,7 +327,7 @@ dependencies = [
  "cfg-if",
  "critical-section",
  "futures-util",
- "heapless 0.7.16",
+ "heapless 0.7.17",
 ]
 
 [[package]]
@@ -348,7 +339,7 @@ dependencies = [
  "cfg-if",
  "critical-section",
  "futures-util",
- "heapless 0.7.16",
+ "heapless 0.7.17",
 ]
 
 [[package]]
@@ -362,7 +353,7 @@ dependencies = [
  "embedded-hal 0.2.7",
  "embedded-hal-async",
  "futures-util",
- "heapless 0.7.16",
+ "heapless 0.7.17",
 ]
 
 [[package]]
@@ -449,9 +440,9 @@ checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
 
 [[package]]
 name = "embedded-io-async"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de03527d6fb488b2d7c7a4dc81dfb6a657efe264256bfc70bb899746821666b1"
+checksum = "3ff09972d4073aa8c299395be75161d582e7629cd663171d62af73c8d50dba3f"
 dependencies = [
  "embedded-io",
 ]
@@ -462,7 +453,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "447416d161ba378782c13e82b11b267d6d2104b4913679a7c5640e7e94f96ea7"
 dependencies = [
- "heapless 0.7.16",
+ "heapless 0.7.17",
  "nb 1.1.0",
  "no-std-net 0.6.0",
 ]
@@ -475,7 +466,7 @@ checksum = "a0f75f0ac83505f354443332324ef1399463902718b95b4ce153ae9b3660f341"
 dependencies = [
  "embedded-io-async",
  "embedded-nal",
- "heapless 0.7.16",
+ "heapless 0.7.17",
  "no-std-net 0.6.0",
 ]
 
@@ -488,7 +479,7 @@ dependencies = [
  "atomic-waker",
  "embedded-io",
  "enumset",
- "heapless 0.7.16",
+ "heapless 0.7.17",
  "no-std-net 0.5.0",
  "serde",
 ]
@@ -605,7 +596,7 @@ dependencies = [
 [[package]]
 name = "esp-mbedtls"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-mbedtls.git#fcc50ea3127373480ae268b0d779126a84e89ffa"
+source = "git+https://github.com/esp-rs/esp-mbedtls.git#749a0cc8cd4f65d198e9f3e6e78aa485f5f8435c"
 dependencies = [
  "embedded-io",
  "embedded-io-async",
@@ -617,7 +608,7 @@ dependencies = [
 [[package]]
 name = "esp-mbedtls-sys"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-mbedtls.git#fcc50ea3127373480ae268b0d779126a84e89ffa"
+source = "git+https://github.com/esp-rs/esp-mbedtls.git#749a0cc8cd4f65d198e9f3e6e78aa485f5f8435c"
 dependencies = [
  "anyhow",
 ]
@@ -656,9 +647,10 @@ dependencies = [
 [[package]]
 name = "esp-wifi"
 version = "0.1.1"
-source = "git+https://github.com/esp-rs/esp-wifi#0c141a915dcb34f63fcc62211f3da95a8c17200d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7d63238617d88e12989ca665a01216c8235e51fb968fee84418cec605498a51"
 dependencies = [
- "atomic-polyfill 1.0.3",
+ "atomic-polyfill",
  "atomic_enum",
  "cfg-if",
  "critical-section",
@@ -677,7 +669,7 @@ dependencies = [
  "esp32s2-hal",
  "esp32s3-hal",
  "fugit",
- "heapless 0.7.16",
+ "heapless 0.7.17",
  "libm",
  "linked_list_allocator",
  "log",
@@ -690,7 +682,8 @@ dependencies = [
 [[package]]
 name = "esp-wifi-sys"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#0c141a915dcb34f63fcc62211f3da95a8c17200d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f768a41dbcdaffad531cd64e26952befca118221e36a963db1d735bce48dc69"
 dependencies = [
  "anyhow",
 ]
@@ -1027,11 +1020,11 @@ checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 
 [[package]]
 name = "heapless"
-version = "0.7.16"
+version = "0.7.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db04bc24a18b9ea980628ecf00e6c0264f3c1426dac36c00cb49b6fbad8b0743"
+checksum = "cdc6457c0eb62c71aac4bc17216026d8410337c4126773b9c5daba343f17964f"
 dependencies = [
- "atomic-polyfill 0.1.11",
+ "atomic-polyfill",
  "hash32 0.2.1",
  "rustc_version",
  "spin",
@@ -1152,7 +1145,7 @@ dependencies = [
  "display-interface",
  "embedded-graphics-core",
  "embedded-hal 0.2.7",
- "heapless 0.7.16",
+ "heapless 0.7.17",
  "nb 1.1.0",
 ]
 
@@ -1375,12 +1368,12 @@ dependencies = [
 
 [[package]]
 name = "rust-mqtt"
-version = "0.1.5"
-source = "git+https://github.com/obabec/rust-mqtt.git#483138c2f9187b1b1e81eea4609b04fd8c37e9c2"
+version = "0.2.0"
+source = "git+https://github.com/obabec/rust-mqtt.git#6dd6f293596220da78981ce19a925b0dda616642"
 dependencies = [
  "embedded-io",
  "embedded-io-async",
- "heapless 0.7.16",
+ "heapless 0.8.0",
  "rand_core",
 ]
 
@@ -1451,7 +1444,7 @@ dependencies = [
  "bitflags 1.3.2",
  "byteorder",
  "cfg-if",
- "heapless 0.7.16",
+ "heapless 0.7.17",
  "managed",
 ]
 
@@ -1626,7 +1619,8 @@ dependencies = [
 [[package]]
 name = "tt21100-async"
 version = "0.1.0"
-source = "git+https://github.com/jessebraham/tt21100.git?branch=feature/async#291051bd52cb881046cf5fbf5c4618ed82b8a1dc"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7288a9ba776ff2f37ccb0d8e9da48dc0b6f5648728d0004e28976766d3deccc0"
 dependencies = [
  "bondrewd",
  "embedded-hal-async",
@@ -1680,9 +1674,9 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 
 [[package]]
 name = "winnow"
-version = "0.5.19"
+version = "0.5.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "829846f3e3db426d4cee4510841b71a8e58aa2a76b1132579487ae430ccd9c7b"
+checksum = "0383266b19108dfc6314a56047aa545a1b4d1be60e799b4dbdd407b56402704b"
 dependencies = [
  "memchr",
 ]
