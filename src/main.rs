@@ -48,7 +48,7 @@ use embassy_executor::Spawner;
 use embassy_net::tcp::TcpSocket;
 use embassy_net::dns::DnsQueryType;
 use embassy_net::{Config, Stack, StackResources};
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Instant, Timer};
 
 // mqtt imports
 use rust_mqtt::{
@@ -58,8 +58,8 @@ use rust_mqtt::{
 };
 
 // tls imports
-use esp_mbedtls::{asynch::Session, set_debug, Mode, TlsVersion};
-use esp_mbedtls::{Certificates, X509};
+// use esp_mbedtls::{asynch::Session, set_debug, Mode, TlsVersion};
+// use esp_mbedtls::{Certificates, X509};
 
 use bme680::*;
 
@@ -101,11 +101,10 @@ async fn main(spawner: Spawner) {
     )
     .timer0;
 
-    let timer0 = TimerGroup::new(
+    let timer_group0 = TimerGroup::new(
         peripherals.TIMG0,
         &clocks,
-    )
-    .timer0;
+    );
 
     let init = initialize(
         EspWifiInitFor::Wifi,
@@ -124,25 +123,30 @@ async fn main(spawner: Spawner) {
 
     embassy::init(
         &clocks,
-        timer0,
+        timer_group0,
     );
 
     let mut delay = Delay::new(&clocks);
 
     let sclk = io.pins.gpio7;
     let mosi = io.pins.gpio6;
+    let cs = io.pins.gpio5;
+    let miso = io.pins.gpio2;
 
     let dc = io.pins.gpio4.into_push_pull_output();
     let mut backlight = io.pins.gpio45.into_push_pull_output();
     let reset = io.pins.gpio48.into_push_pull_output();
 
-    let spi = Spi::new_no_cs_no_miso(
+    let spi = Spi::new(
         peripherals.SPI2,
-        sclk,
-        mosi,
-        60u32.MHz(),
+        40u32.MHz(),
         SpiMode::Mode0,
         &clocks,
+    ).with_pins(
+        Some(sclk),
+        Some(mosi),
+        Some(miso),
+        Some(cs),
     );
 
     let di = SPIInterfaceNoCS::new(spi, dc);
@@ -247,7 +251,7 @@ async fn main(spawner: Spawner) {
 
         let mut socket = TcpSocket::new(&stack, &mut rx_buffer, &mut tx_buffer);
 
-        socket.set_timeout(Some(embassy_time::Duration::from_secs(60)));
+        socket.set_timeout(Some(Duration::from_secs(60)));
 
         let address = match stack
             .dns_query(ENDPOINT, DnsQueryType::A)
@@ -270,33 +274,33 @@ async fn main(spawner: Spawner) {
         }
         println!("connected!");
 
-        set_debug(0);
+        // set_debug(0);
 
-        let certificates = Certificates {
-            ca_chain: X509::pem(CERT.as_bytes(),
-            )
-            .ok(),
-            certificate: X509::pem(CLIENT_CERT.as_bytes())
-                .ok(),
-            private_key: X509::pem(PRIVATE_KEY.as_bytes())
-                .ok(),
-            password: None,
-        };
+        // let certificates = Certificates {
+        //     ca_chain: X509::pem(CERT.as_bytes(),
+        //     )
+        //     .ok(),
+        //     certificate: X509::pem(CLIENT_CERT.as_bytes())
+        //         .ok(),
+        //     private_key: X509::pem(PRIVATE_KEY.as_bytes())
+        //         .ok(),
+        //     password: None,
+        // };
 
-        let tls: Session<_, 4096> = Session::new(
-            &mut socket,
-            ENDPOINT,
-            Mode::Client,
-            TlsVersion::Tls1_3,
-            certificates,
-        )
-        .unwrap();
+        // let tls: Session<_, 4096> = Session::new(
+        //     &mut socket,
+        //     ENDPOINT,
+        //     Mode::Client,
+        //     TlsVersion::Tls1_3,
+        //     certificates,
+        // )
+        // .unwrap();
 
-        println!("Start tls connect");
+        // println!("Start tls connect");
 
-        let connected_tls = tls.connect().await.expect("TLS connect failed");
+        // let connected_tls = tls.connect().await.expect("TLS connect failed");
     
-        println!("Tls connected!");
+        // println!("Tls connected!");
 
         let mut config = ClientConfig::new(
             rust_mqtt::client::client_config::MqttVersion::MQTTv5,
@@ -310,7 +314,7 @@ async fn main(spawner: Spawner) {
         let mut write_buffer = [0; 4096];
 
         let mut client =
-            MqttClient::<_, 5, _>::new(connected_tls, &mut write_buffer, 4096, &mut recv_buffer, 4096, config);
+            MqttClient::<_, 5, _>::new(socket, &mut write_buffer, 4096, &mut recv_buffer, 4096, config);
 
         match client.connect_to_broker().await {
             Ok(()) => {}
@@ -565,8 +569,8 @@ async fn connection(mut controller: WifiController<'static>) {
         }
         if !matches!(controller.is_started(), Ok(true)) {
             let client_config = Configuration::Client(ClientConfiguration {
-                ssid: SSID.into(),
-                password: PASSWORD.into(),
+                ssid: SSID.try_into().unwrap(),
+                password: PASSWORD.try_into().unwrap(),
                 ..Default::default()
             });
 
@@ -613,7 +617,7 @@ async fn touch_controller_task(mut touch_controller: TT21100<I2C<'static, I2C0>,
 
     loop {
         touch_controller.data_available().await.unwrap();
-        let current_time = embassy_time::Instant::now().as_millis();
+        let current_time = Instant::now().as_millis();
         if let Ok(event) = touch_controller.event().await {
             if current_time - last_touch_time > TOUCH_TIMEOUT {
                 match event {

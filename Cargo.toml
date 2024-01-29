@@ -6,38 +6,33 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-hal = { package = "esp32s3-hal", version = "0.13.0", features = ["embassy", "async", "embassy-time-timg0", "rt", "embassy-executor-thread"] }
-esp-wifi = { version = "0.1.1", features = ["esp32s3", "async", "embassy-net", "wifi", "ipv6", "phy-enable-usb"] }
-nb = "1.0.0"
+hal = { package = "esp32s3-hal", version = "0.15.0", features = ["embassy", "async", "embassy-time-timg0", "rt", "embassy-executor-thread"] }
+esp-wifi = { version = "0.3.0", features = ["esp32s3", "async", "embassy-net", "wifi", "ipv6", "phy-enable-usb"] }
 heapless = "0.8.0"
-esp-backtrace = { version = "0.9.0", features = ["esp32s3", "panic-handler", "exception-handler", "print-uart"] }
-esp-println       = { version = "0.7.0", features = ["esp32s3"] }
-embedded-svc = { version = "0.26.4", default-features = false }
+esp-backtrace = { version = "0.10.0", features = ["esp32s3", "panic-handler", "exception-handler", "print-uart"] }
+esp-println       = { version = "0.8.0", features = ["esp32s3"] }
+embedded-svc = { version = "0.27.0", default-features = false }
 
-embassy-net = { version = "0.2.1", features = ["nightly", "tcp", "udp", "dhcpv4", "medium-ethernet", "proto-ipv6", "dns"] }
-embassy-executor  = { version = "0.3.1", package = "embassy-executor", features = ["nightly", "integrated-timers", "arch-xtensa"] }
+embassy-net = { version = "0.4.0", features = ["tcp", "udp", "dhcpv4", "medium-ethernet", "proto-ipv6", "dns"] }
+embassy-executor  = { version = "0.5.0", package = "embassy-executor", features = ["integrated-timers", "task-arena-size-81920"] }
 embassy-futures = { version = "0.1.0" }
-embassy-time       = { version = "0.1.3", features = ["nightly"] }
-embedded-hal-1     = { version = "=1.0.0-rc.1", package = "embedded-hal" }
-embedded-hal-async = { version = "=1.0.0-rc.1" }
-embedded-io-async = { version = "0.6.0" }
-embedded-hal-nb    = { version = "=1.0.0-rc.1" }
-embedded-can       = { version = "0.4.1" }
+embassy-time       = { version = "0.3.0" }
+embedded-hal-async = "1.0.0"
+embedded-io-async = "0.6.1"
 
 static_cell = { version = "2.0.0", features = ["nightly"] }
 
 rust-mqtt = { version = "0.2.0", default-features = false, features = ["tls"]}
-esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git", package = "esp-mbedtls", features = ["esp32s3", "async"]}
+# esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git", package = "esp-mbedtls", features = ["esp32s3", "async"]}
 
 bme680 = "0.6.0"
 
 display-interface-spi = "0.4"
-display-interface = "0.4.1"
+display-interface = "0.4"
 embedded-graphics = "0.8.1"
 mipidsi = "0.7.1"
 esp_box_ui = {git = "https://github.com/sambenko/esp-box-ui.git", branch = "main" }
 
 tt21100-async = "0.1.0"
 critical-section   = "1.1.2"
-
 toml-cfg = "0.1.3"
