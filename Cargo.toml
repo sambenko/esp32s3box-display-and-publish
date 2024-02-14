@@ -10,7 +10,7 @@ hal = { package = "esp32s3-hal", version = "0.15.0", features = ["embassy", "asy
 esp-wifi = { version = "0.3.0", features = ["esp32s3", "async", "embassy-net", "wifi", "ipv6", "phy-enable-usb"] }
 heapless = "0.8.0"
 esp-backtrace = { version = "0.10.0", features = ["esp32s3", "panic-handler", "exception-handler", "print-uart"] }
-esp-println       = { version = "0.8.0", features = ["esp32s3"] }
+esp-println       = { version = "0.9.0", features = ["esp32s3"] }
 embedded-svc = { version = "0.27.0", default-features = false }
 
 embassy-net = { version = "0.4.0", features = ["tcp", "udp", "dhcpv4", "medium-ethernet", "proto-ipv6", "dns"] }
@@ -22,7 +22,7 @@ embedded-io-async = "0.6.1"
 
 static_cell = { version = "2.0.0", features = ["nightly"] }
 
-rust-mqtt = { version = "0.2.0", default-features = false, features = ["tls"]}
+rust-mqtt = { version = "0.3.0", default-features = false, features = ["tls"]}
 # esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git", package = "esp-mbedtls", features = ["esp32s3", "async"]}
 
 bme680 = "0.6.0"
