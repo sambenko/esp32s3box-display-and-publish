@@ -35,7 +35,8 @@ use hal::{
     prelude::{_fugit_RateExtU32, *},
     timer::TimerGroup,
     Rng, IO, Delay,
-    embassy, interrupt
+    embassy, interrupt,
+    rsa::Rsa,
 };
 
 //wifi imports
@@ -58,8 +59,8 @@ use rust_mqtt::{
 };
 
 // tls imports
-// use esp_mbedtls::{asynch::Session, set_debug, Mode, TlsVersion};
-// use esp_mbedtls::{Certificates, X509};
+use esp_mbedtls::{asynch::Session, set_debug, Mode, TlsVersion};
+use esp_mbedtls::{Certificates, X509};
 
 use bme680::*;
 
@@ -246,6 +247,8 @@ async fn main(spawner: Spawner) {
         sleep(500).await;
     }
 
+    let mut rsa = Rsa::new(peripherals.RSA);
+
     loop {
         sleep(1000).await;
 
@@ -274,33 +277,34 @@ async fn main(spawner: Spawner) {
         }
         println!("connected!");
 
-        // set_debug(0);
+        set_debug(0);
 
-        // let certificates = Certificates {
-        //     ca_chain: X509::pem(CERT.as_bytes(),
-        //     )
-        //     .ok(),
-        //     certificate: X509::pem(CLIENT_CERT.as_bytes())
-        //         .ok(),
-        //     private_key: X509::pem(PRIVATE_KEY.as_bytes())
-        //         .ok(),
-        //     password: None,
-        // };
+        let certificates = Certificates {
+            ca_chain: X509::pem(CERT.as_bytes(),
+            )
+            .ok(),
+            certificate: X509::pem(CLIENT_CERT.as_bytes())
+                .ok(),
+            private_key: X509::pem(PRIVATE_KEY.as_bytes())
+                .ok(),
+            password: None,
+        };
 
-        // let tls: Session<_, 4096> = Session::new(
-        //     &mut socket,
-        //     ENDPOINT,
-        //     Mode::Client,
-        //     TlsVersion::Tls1_3,
-        //     certificates,
-        // )
-        // .unwrap();
+        let tls: Session<_, 4096> = Session::new(
+            &mut socket,
+            ENDPOINT,
+            Mode::Client,
+            TlsVersion::Tls1_3,
+            certificates,
+            Some(&mut rsa),
+        )
+        .unwrap();
 
-        // println!("Start tls connect");
+        println!("Start tls connect");
 
-        // let connected_tls = tls.connect().await.expect("TLS connect failed");
+        let connected_tls = tls.connect().await.expect("TLS connect failed");
     
-        // println!("Tls connected!");
+        println!("Tls connected!");
 
         let mut config = ClientConfig::new(
             rust_mqtt::client::client_config::MqttVersion::MQTTv5,
@@ -314,7 +318,7 @@ async fn main(spawner: Spawner) {
         let mut write_buffer = [0; 4096];
 
         let mut client =
-            MqttClient::<_, 5, _>::new(socket, &mut write_buffer, 4096, &mut recv_buffer, 4096, config);
+            MqttClient::<_, 5, _>::new(connected_tls, &mut write_buffer, 4096, &mut recv_buffer, 4096, config);
 
         match client.connect_to_broker().await {
             Ok(()) => {}
