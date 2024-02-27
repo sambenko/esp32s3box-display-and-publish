@@ -23,7 +23,7 @@ embedded-io-async = "0.6.1"
 static_cell = { version = "2.0.0", features = ["nightly"] }
 
 rust-mqtt = { version = "0.3.0", default-features = false, features = ["tls"]}
-# esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git", package = "esp-mbedtls", features = ["esp32s3", "async"]}
+esp-mbedtls = { git = "https://github.com/esp-rs/esp-mbedtls.git", package = "esp-mbedtls", features = ["esp32s3", "async"]}
 
 bme680 = "0.6.0"
 
